@@ -1,0 +1,7 @@
+run_id,feature,scenario,step,status,duration_ms,failure_bucket,error_message,timestamp,architecture_type,repository_name,experiment_batch_id,run_index,workflow_run_id,workflow_attempt,tool_name,platform,viewport,generated_at
+sample-run-0,Browse Catalog,View the pizza catalog,,PASS,1200,,,2026-01-01T00:00:00.000Z,GTAA_BASELINE,gTAA,sample-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,playwright,desktop,desktop,
+sample-run-0,Customize Pizza,Customize a pizza,,PASS,1800,,,2026-01-01T00:00:00.000Z,GTAA_BASELINE,gTAA,sample-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,playwright,responsive,responsive,
+sample-run-0,Place Delivery Order,Place a delivery order,,PASS,2600,,,2026-01-01T00:00:00.000Z,GTAA_BASELINE,gTAA,sample-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,playwright,android,android,
+sample-run-1,Browse Catalog,View the pizza catalog,,PASS,1250,,,2026-01-02T00:00:00.000Z,GTAA_BASELINE,gTAA,sample-batch,1,NOT_AVAILABLE,NOT_AVAILABLE,playwright,desktop,desktop,
+sample-run-1,Customize Pizza,Customize a pizza,,FAIL,1920,UI_ACTION_FAILURE,synthetic UI_ACTION_FAILURE,2026-01-02T00:00:00.000Z,GTAA_BASELINE,gTAA,sample-batch,1,NOT_AVAILABLE,NOT_AVAILABLE,playwright,responsive,responsive,
+sample-run-1,Place Delivery Order,Place a delivery order,,PASS,2675,,,2026-01-02T00:00:00.000Z,GTAA_BASELINE,gTAA,sample-batch,1,NOT_AVAILABLE,NOT_AVAILABLE,playwright,android,android,

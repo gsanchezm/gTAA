@@ -1,0 +1,92 @@
+{
+  "catalogScreen": {
+    "web": "[data-testid='screen-catalog']",
+    "mobile": "~screen-catalog"
+  },
+  "catalogLoading": {
+    "web": "[data-testid='catalog-loading']"
+  },
+  "catalogError": {
+    "web": "[data-testid='catalog-error']",
+    "mobile": "~text-catalog-error"
+  },
+  "emptyResultsText": {
+    "mobile": "~text-empty-results"
+  },
+  "sectionHeader": {
+    "mobile": "~view-section-header"
+  },
+  "sectionTitleText": {
+    "mobile": "~text-section-title"
+  },
+  "searchInput": {
+    "web": {
+      "responsive": "[data-testid='search-pizza-responsive']",
+      "desktop": "[data-testid='search-pizza-desktop']"
+    },
+    "mobile": "~input-search-pizza"
+  },
+  "clearFiltersButton": {
+    "web": {
+      "responsive": "[data-testid='clear-filters-responsive']",
+      "desktop": "[data-testid='clear-filters-desktop']"
+    }
+  },
+  "categoryList": {
+    "web": "[data-testid^='category-']",
+    "mobile": {
+      "android": "android=new UiSelector().descriptionStartsWith(\"btn-category-\")",
+      "ios": "-ios class chain:**/XCUIElementTypeOther[`name BEGINSWITH 'btn-category-'`]"
+    }
+  },
+  "categoryById": {
+    "web": "[data-testid='category-{id}']",
+    "mobile": "~btn-category-{id}"
+  },
+  "categoryLabel": {
+    "mobile": "~text-category-{id}"
+  },
+  "pizzaCardList": {
+    "web": "[data-testid^='pizza-card-']",
+    "mobile": {
+      "android": "android=new UiSelector().descriptionStartsWith(\"card-pizza-\")",
+      "ios": "-ios class chain:**/XCUIElementTypeOther[`name BEGINSWITH 'card-pizza-'`]"
+    }
+  },
+  "pizzaCard": {
+    "web": {
+      "responsive": "[data-testid='pizza-card-{id}-responsive']",
+      "desktop": "[data-testid='pizza-card-{id}-desktop']"
+    },
+    "mobile": "~card-pizza-{id}"
+  },
+  "pizzaImage": {
+    "web": "[data-testid='pizza-image-{id}']",
+    "mobile": "~img-pizza-{id}"
+  },
+  "pizzaName": {
+    "web": {
+      "responsive": "[data-testid='pizza-name-{id}-responsive']",
+      "desktop": "[data-testid='pizza-name-{id}-desktop']"
+    },
+    "mobile": "~text-pizza-name-{id}"
+  },
+  "pizzaDescription": {
+    "web": "[data-testid='pizza-description-{id}']",
+    "mobile": "~text-pizza-desc-{id}"
+  },
+  "pizzaPrice": {
+    "web": "[data-testid='pizza-price-{id}']",
+    "mobile": "~text-pizza-price-{id}"
+  },
+  "addToCartButton": {
+    "web": {
+      "responsive": "[data-testid='add-to-cart-{id}-responsive']",
+      "desktop": "[data-testid='add-to-cart-{id}-desktop']"
+    },
+    "mobile": "~btn-add-pizza-{id}"
+  },
+  "addToCartLabel": {
+    "mobile": "~text-add-pizza-{id}"
+  }
+}

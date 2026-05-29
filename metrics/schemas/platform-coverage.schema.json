@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://tom-architecture/schemas/platform-coverage.schema.json",
+  "title": "PlatformCoverageEntry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "featureFile",
+    "featureName",
+    "scenarioName",
+    "desktop",
+    "responsive",
+    "android",
+    "ios",
+    "api",
+    "performance",
+    "visual",
+    "totalPlatforms"
+  ],
+  "properties": {
+    "featureFile": { "type": "string" },
+    "featureName": { "type": "string" },
+    "scenarioName": { "type": "string" },
+    "desktop": { "type": "boolean" },
+    "responsive": { "type": "boolean" },
+    "android": { "type": "boolean" },
+    "ios": { "type": "boolean" },
+    "api": { "type": "boolean" },
+    "performance": { "type": "boolean" },
+    "visual": { "type": "boolean" },
+    "totalPlatforms": { "type": "integer", "minimum": 0, "maximum": 7 }
+  }
+}

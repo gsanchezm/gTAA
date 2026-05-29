@@ -1,0 +1,44 @@
+{
+  "feature": "pizzaBuilder",
+  "version": "1.0.0",
+  "defaults": {
+    "thresholds": { "pixelRatio": 0.01 },
+    "platforms": ["web", "android", "ios"],
+    "viewports": ["desktop", "responsive", "mobile"]
+  },
+  "snapshots": [
+    {
+      "id": "pizzaBuilder_size_selected",
+      "description": "After a size pill has been clicked — total reflects the size's price. Web target uses the size list region because the highlighted pill is the load-bearing visual change.",
+      "regionRef": "sizeOptionsList",
+      "maskRefs": [],
+      "platforms": ["web"],
+      "viewports": ["desktop", "responsive"],
+      "thresholds": { "pixelRatio": 0.01 },
+      "tags": ["@visual", "@pizzaBuilder", "@size"],
+      "telemetry": { "enabled": true, "emitOnLoad": false }
+    },
+    {
+      "id": "pizzaBuilder_toppings_selected",
+      "description": "After one or more toppings are checked — selected state visual + updated total. Web-only here because the toppings-list locator has no mobile mapping for the responsive grid container today.",
+      "regionRef": "toppingsList",
+      "maskRefs": ["customizerPriceText"],
+      "platforms": ["web"],
+      "viewports": ["desktop", "responsive"],
+      "thresholds": { "pixelRatio": 0.01 },
+      "tags": ["@visual", "@pizzaBuilder", "@toppings"],
+      "telemetry": { "enabled": true, "emitOnLoad": false }
+    },
+    {
+      "id": "pizzaBuilder_confirm_state",
+      "description": "Confirm CTA enabled state — captured just before the user clicks Add to cart. Asserts the button's enabled appearance is stable per (market, language).",
+      "regionRef": "confirmAddToCartButton",
+      "maskRefs": [],
+      "platforms": ["web"],
+      "viewports": ["desktop", "responsive"],
+      "thresholds": { "pixelRatio": 0.005 },
+      "tags": ["@visual", "@pizzaBuilder", "@confirm"],
+      "telemetry": { "enabled": true, "emitOnLoad": false }
+    }
+  ]
+}

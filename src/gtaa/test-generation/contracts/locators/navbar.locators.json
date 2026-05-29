@@ -1,0 +1,100 @@
+{
+  "navbarContainer": {
+    "mobile": "~view-navbar"
+  },
+  "locationHeaderContainer": {
+    "mobile": "~view-location-header"
+  },
+  "headerLogoImage": {
+    "mobile": "~img-header-logo"
+  },
+  "headerBrandText": {
+    "mobile": "~text-header-brand"
+  },
+  "navLogo": {
+    "web": "[data-testid='nav-logo']"
+  },
+  "navCatalogLink": {
+    "web": "[data-testid='nav-catalog']"
+  },
+  "navCheckoutLink": {
+    "web": "[data-testid='nav-checkout']"
+  },
+  "navCartCount": {
+    "web": "[data-testid='nav-cart-count']"
+  },
+  "navProfileLink": {
+    "web": "[data-testid='nav-profile']"
+  },
+  "navbarTitleText": {
+    "mobile": "~text-navbar-title"
+  },
+  "languageDEButton": {
+    "web": "[data-testid='lang-de']",
+    "mobile": "~btn-lang-de"
+  },
+  "languageDELabel": {
+    "mobile": "~text-lang-de"
+  },
+  "languageFRButton": {
+    "web": "[data-testid='lang-fr']",
+    "mobile": "~btn-lang-fr"
+  },
+  "languageFRLabel": {
+    "mobile": "~text-lang-fr"
+  },
+  "headerLanguageDEButton": {
+    "mobile": "~btn-header-lang-de"
+  },
+  "headerLanguageDELabel": {
+    "mobile": "~text-header-lang-de"
+  },
+  "headerLanguageFRButton": {
+    "mobile": "~btn-header-lang-fr"
+  },
+  "headerLanguageFRLabel": {
+    "mobile": "~text-header-lang-fr"
+  },
+  "mobileMenuButton": {
+    "web": "[data-testid='mobile-menu-btn']"
+  },
+  "mobileNavCatalogLink": {
+    "web": "[data-testid='mobile-nav-catalog']"
+  },
+  "mobileNavCheckoutLink": {
+    "web": "[data-testid='mobile-nav-checkout']"
+  },
+  "mobileNavProfileLink": {
+    "web": "[data-testid='mobile-nav-profile']"
+  },
+  "mobileLogoutButton": {
+    "web": "[data-testid='mobile-logout-btn']"
+  },
+  "bottomNavContainer": {
+    "mobile": "~view-bottom-nav"
+  },
+  "bottomNavList": {
+    "mobile": {
+      "android": "android=new UiSelector().descriptionMatches(\"nav-[a-z]+\")",
+      "ios": "-ios class chain:**/XCUIElementTypeOther[`name BEGINSWITH 'nav-'`]"
+    }
+  },
+  "bottomNavLabel": {
+    "mobile": {
+      "android": "android=new UiSelector().resourceIdMatches(\"text-nav-(?!badge-).*\")",
+      "ios": "-ios class chain:**/XCUIElementTypeStaticText[`name BEGINSWITH 'text-nav-' AND NOT (name BEGINSWITH 'text-nav-badge-')`]"
+    }
+  },
+  "bottomNavBadge": {
+    "mobile": {
+      "android": "android=new UiSelector().descriptionStartsWith(\"view-nav-badge-\")",
+      "ios": "-ios class chain:**/XCUIElementTypeOther[`name BEGINSWITH 'view-nav-badge-'`]"
+    }
+  },
+  "bottomNavBadgeText": {
+    "mobile": {
+      "android": "android=new UiSelector().descriptionStartsWith(\"text-nav-badge-\")",
+      "ios": "-ios class chain:**/XCUIElementTypeStaticText[`name BEGINSWITH 'text-nav-badge-'`]"
+    }
+  }
+}

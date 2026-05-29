@@ -1,0 +1,50 @@
+{
+  "feature": "checkout",
+  "version": "1.0.0",
+  "baseUrlRef": "{{baseUrl}}",
+  "endpoints": [
+    {
+      "id": "checkout.placeOrder",
+      "description": "Submit a checkout for the current cart and obtain an order id.",
+      "method": "POST",
+      "path": "/api/{{market}}/{{language}}/checkout/place-order",
+      "headersTemplate": {
+        "Authorization": "Bearer {{authToken}}",
+        "Content-Type": "application/json",
+        "Accept-Language": "{{language}}",
+        "X-Market": "{{market}}"
+      },
+      "queryTemplate": {
+        "cartId": "{{cartId}}"
+      },
+      "bodyTemplate": {
+        "customerId": "{{customerId}}",
+        "cartId": "{{cartId}}",
+        "paymentMethod": "{{paymentMethod}}",
+        "delivery": {
+          "street": "{{deliveryStreet}}",
+          "zip": "{{deliveryZip}}",
+          "suburb": "{{deliverySuburb}}",
+          "fullName": "{{deliveryName}}",
+          "phone": "{{deliveryPhone}}"
+        }
+      },
+      "expect": {
+        "status": [200, 201],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonPathAssertions": [
+          { "path": "$.orderId", "matches": "^[A-Z0-9-]{6,}$" },
+          { "path": "$.status", "equals": "ACCEPTED" }
+        ]
+      },
+      "extract": [
+        { "name": "orderId", "from": "body", "path": "$.orderId" },
+        { "name": "orderTotal", "from": "body", "path": "$.totals.total" }
+      ],
+      "tags": ["@api", "@checkout", "@place-order"],
+      "telemetry": { "enabled": true, "emitOnLoad": false }
+    }
+  ]
+}

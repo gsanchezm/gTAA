@@ -1,0 +1,81 @@
+{
+  "feature": "profile",
+  "version": "0.1.0",
+  "baseUrlRef": "{{apiBaseUrl}}",
+  "_note": "TDD assumption — backend implementation pending. No existing DAO calls these endpoints; this contract is what the profile slice EXPECTS the OmniPizza backend to expose. If a runtime call returns 404, that is the expected TDD outcome: the backend must add these two endpoints to match this contract. Canonical path is /api/users/me/profile (resource-oriented, authenticated user inferred from Bearer token). The PATCH variant is preferred over PUT because the FE form may submit a subset of fields (partial updates) and the backend should merge rather than replace.",
+  "endpoints": [
+    {
+      "id": "profile.getMe",
+      "description": "Fetch the authenticated user's profile. Backs the View Profile screen render and the @api assertion in update-profile.feature.",
+      "method": "GET",
+      "path": "/api/users/me/profile",
+      "headersTemplate": {
+        "Authorization": "Bearer {{authToken}}",
+        "Accept": "application/json",
+        "Accept-Language": "{{language}}",
+        "x-country-code": "{{market}}"
+      },
+      "expect": {
+        "status": [200],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonPathAssertions": [
+          { "path": "$.full_name", "matches": ".*" },
+          { "path": "$.phone", "matches": ".*" },
+          { "path": "$.address", "matches": ".*" },
+          { "path": "$.notes", "matches": ".*" },
+          { "path": "$.premium", "matches": "^(true|false)$" }
+        ]
+      },
+      "extract": [
+        { "name": "fullName", "from": "body", "path": "$.full_name" },
+        { "name": "phone",    "from": "body", "path": "$.phone" },
+        { "name": "address",  "from": "body", "path": "$.address" },
+        { "name": "notes",    "from": "body", "path": "$.notes" },
+        { "name": "premium",  "from": "body", "path": "$.premium" }
+      ],
+      "tags": ["@api", "@profile"],
+      "telemetry": { "enabled": true, "emitOnLoad": false }
+    },
+    {
+      "id": "profile.updateMe",
+      "description": "Update the authenticated user's profile. Accepts any subset of {full_name, phone, address, notes}; the backend MUST merge (not replace) with the existing record. Returns the full, updated profile payload — same shape as GET so the caller can read-after-write without a follow-up fetch.",
+      "method": "PATCH",
+      "path": "/api/users/me/profile",
+      "headersTemplate": {
+        "Authorization": "Bearer {{authToken}}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Accept-Language": "{{language}}",
+        "x-country-code": "{{market}}"
+      },
+      "bodyTemplate": {
+        "full_name": "{{fullName}}",
+        "phone": "{{phone}}",
+        "address": "{{address}}",
+        "notes": "{{notes}}"
+      },
+      "expect": {
+        "status": [200],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonPathAssertions": [
+          { "path": "$.full_name", "matches": "^.+$" },
+          { "path": "$.phone",     "matches": "^.+$" },
+          { "path": "$.address",   "matches": "^.+$" },
+          { "path": "$.notes",     "matches": ".*" }
+        ]
+      },
+      "extract": [
+        { "name": "fullName", "from": "body", "path": "$.full_name" },
+        { "name": "phone",    "from": "body", "path": "$.phone" },
+        { "name": "address",  "from": "body", "path": "$.address" },
+        { "name": "notes",    "from": "body", "path": "$.notes" }
+      ],
+      "tags": ["@api", "@profile", "@update"],
+      "telemetry": { "enabled": true, "emitOnLoad": false }
+    }
+  ]
+}

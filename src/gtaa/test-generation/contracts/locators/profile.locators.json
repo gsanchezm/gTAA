@@ -1,0 +1,83 @@
+{
+  "profileScreen": {
+    "mobile": "~screen-profile"
+  },
+  "profileCard": {
+    "mobile": "~view-profile-card"
+  },
+  "profileAvatar": {
+    "mobile": "~img-profile-avatar"
+  },
+  "profileSubtitleText": {
+    "mobile": "~text-profile-subtitle"
+  },
+  "profileUsernameText": {
+    "mobile": "~text-profile-username"
+  },
+  "premiumBadgeText": {
+    "mobile": "~text-premium-badge"
+  },
+  "profileMetaText": {
+    "mobile": "~text-profile-meta"
+  },
+  "formTitleText": {
+    "mobile": "~text-form-title"
+  },
+  "fullNameLabel": {
+    "mobile": "~label-profile-fullname"
+  },
+  "profileFullNameInput": {
+    "web": {
+      "responsive": "[data-testid='profile-fullname-responsive']",
+      "desktop": "[data-testid='profile-fullname-desktop']"
+    },
+    "mobile": "~input-profile-fullname"
+  },
+  "phoneNumberLabel": {
+    "mobile": "~label-profile-phone"
+  },
+  "profilePhoneNumberInput": {
+    "web": "[data-testid='profile-phone']",
+    "mobile": "~input-profile-phone"
+  },
+  "addressLabel": {
+    "mobile": "~label-profile-address"
+  },
+  "addressInput": {
+    "web": {
+      "responsive": "[data-testid='profile-address-responsive']",
+      "desktop": "[data-testid='profile-address-desktop']"
+    }
+  },
+  "notesLabel": {
+    "mobile": "~label-profile-notes"
+  },
+  "notesInput": {
+    "web": "[data-testid='profile-notes']",
+    "mobile": "~input-profile-notes"
+  },
+  "cancelButton": {
+    "web": "[data-testid='profile-cancel-btn']",
+    "mobile": "~btn-cancel-profile"
+  },
+  "cancelButtonLabel": {
+    "mobile": "~text-cancel-profile"
+  },
+  "saveButton": {
+    "web": {
+      "responsive": "[data-testid='profile-save-btn-responsive']",
+      "desktop": "[data-testid='profile-save-btn-desktop']"
+    },
+    "mobile": "~btn-save-profile"
+  },
+  "saveButtonLabel": {
+    "mobile": "~text-save-profile"
+  },
+  "deleteAccountButton": {
+    "web": "[data-testid='delete-account-btn']",
+    "mobile": "~btn-delete-account"
+  },
+  "deleteAccountLabel": {
+    "mobile": "~text-delete-account"
+  }
+}

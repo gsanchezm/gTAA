@@ -1,0 +1,33 @@
+{
+  "feature": "checkout",
+  "version": "1.0.0",
+  "defaults": {
+    "thresholds": { "pixelRatio": 0.005 },
+    "platforms": ["web", "android", "ios"],
+    "viewports": ["desktop", "responsive", "mobile"]
+  },
+  "snapshots": [
+    {
+      "id": "checkout_order_summary",
+      "description": "Order summary panel: items, subtotal, tax, delivery, total.",
+      "regionRef": "orderDetailsList",
+      "maskRefs": ["orderTotalValue"],
+      "platforms": ["web", "android", "ios"],
+      "viewports": ["desktop", "responsive", "mobile"],
+      "thresholds": { "pixelRatio": 0.005 },
+      "tags": ["@visual", "@checkout"],
+      "telemetry": { "enabled": true, "emitOnLoad": false }
+    },
+    {
+      "id": "checkout_payment_summary",
+      "description": "Payment selector with the Place Order CTA visible.",
+      "regionRef": "paymentMethodList",
+      "maskRefs": ["placeOrderButton", "orderTotalValue"],
+      "platforms": ["web", "android", "ios"],
+      "viewports": ["desktop", "responsive", "mobile"],
+      "thresholds": { "pixelRatio": 0.01 },
+      "tags": ["@visual", "@checkout", "@payment"],
+      "telemetry": { "enabled": true, "emitOnLoad": false }
+    }
+  ]
+}

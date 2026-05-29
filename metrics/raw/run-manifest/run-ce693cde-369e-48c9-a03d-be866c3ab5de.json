@@ -1,0 +1,23 @@
+{
+  "architecture_type": "GTAA_BASELINE",
+  "repository_name": "gTAA",
+  "experiment_batch_id": "local-batch",
+  "workflow_run_id": null,
+  "workflow_attempt": null,
+  "job_name": null,
+  "tool_name": "playwright",
+  "run_id": "run-ce693cde-369e-48c9-a03d-be866c3ab5de",
+  "run_index": null,
+  "commit_sha": null,
+  "branch": null,
+  "timestamp": "2026-05-29T05:09:43.958Z",
+  "generated_at": "2026-05-29T05:09:43.959Z",
+  "ci_provider": null,
+  "platform": "unknown",
+  "viewport": null,
+  "driver": null,
+  "tags": [],
+  "environment": "local",
+  "node_version": "v24.14.1",
+  "os": "win32-x64"
+}

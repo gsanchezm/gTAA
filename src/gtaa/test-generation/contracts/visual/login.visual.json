@@ -1,0 +1,44 @@
+{
+  "feature": "login",
+  "version": "1.1.0",
+  "defaults": {
+    "thresholds": { "pixelRatio": 0.005 },
+    "platforms": ["web", "android", "ios"],
+    "viewports": ["desktop", "responsive", "mobile"]
+  },
+  "snapshots": [
+    {
+      "id": "login_screen_initial",
+      "description": "Login screen on first load — logo, welcome title, market selector, username/password form.",
+      "regionRef": "loginScreen",
+      "maskRefs": ["usernameInput", "passwordInput"],
+      "platforms": ["web", "android", "ios"],
+      "viewports": ["desktop", "responsive", "mobile"],
+      "thresholds": { "pixelRatio": 0.005 },
+      "tags": ["@visual", "@login"],
+      "telemetry": { "enabled": true, "emitOnLoad": false }
+    },
+    {
+      "id": "login_screen_localized",
+      "description": "Post-login chrome — logout button label rendered in the active locale. The market-language-localization scenarios end after login completes, so this snapshot fires on the post-login screen where the localized logout button is visible (the same element the scenario asserts).",
+      "regionRef": "logoutButton",
+      "maskRefs": [],
+      "platforms": ["web", "android", "ios"],
+      "viewports": ["desktop", "responsive", "mobile"],
+      "thresholds": { "pixelRatio": 0.02 },
+      "tags": ["@visual", "@login", "@localized"],
+      "telemetry": { "enabled": true, "emitOnLoad": false }
+    },
+    {
+      "id": "login_screen_invalid_credentials",
+      "description": "Login screen after a failed sign-in attempt — the error banner ([data-testid='login-error']) renders 'Invalid credentials' below the form.",
+      "regionRef": "loginScreen",
+      "maskRefs": ["usernameInput", "passwordInput"],
+      "platforms": ["web", "android", "ios"],
+      "viewports": ["desktop", "responsive", "mobile"],
+      "thresholds": { "pixelRatio": 0.01 },
+      "tags": ["@visual", "@login", "@invalid"],
+      "telemetry": { "enabled": true, "emitOnLoad": false }
+    }
+  ]
+}

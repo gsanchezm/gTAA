@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://tom-architecture/schemas/telemetry-event.schema.json",
+  "title": "TelemetryEvent",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "runId",
+    "timestamp",
+    "scenario",
+    "status"
+  ],
+  "properties": {
+    "runId": { "type": "string", "minLength": 1 },
+    "timestamp": { "type": "string" },
+    "feature": { "type": ["string", "null"] },
+    "scenario": { "type": "string" },
+    "step": { "type": ["string", "null"] },
+    "platform": { "type": ["string", "null"] },
+    "viewport": { "type": ["string", "null"] },
+    "status": {
+      "type": "string",
+      "enum": ["PASS", "FAIL", "SKIP", "UNKNOWN"]
+    },
+    "durationMs": { "type": ["number", "null"] },
+    "errorMessage": { "type": ["string", "null"] }
+  }
+}

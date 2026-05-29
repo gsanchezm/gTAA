@@ -1,0 +1,145 @@
+{
+  "checkoutHeader": {
+    "web": "h1:has-text(\"Checkout\")",
+    "mobile": "~text-section-address"
+  },
+  "checkoutScreenLanding": {
+    "mobile": {
+      "android": "android=new UiSelector().resourceIdMatches(\"(text-cart-empty|text-section-address)\")",
+      "ios": "-ios predicate string:name == 'text-cart-empty' OR name == 'text-section-address'"
+    }
+  },
+  "streetInput": {
+    "web": {
+      "responsive": "[data-testid='address-responsive']",
+      "desktop": "[data-testid='address-desktop']"
+    },
+    "mobile": {
+      "android": "android=new UiSelector().description(\"input-address\")",
+      "ios": "~input-address"
+    }
+  },
+  "zipCodeInput": {
+    "web": "[data-testid='zip-code']",
+    "mobile": {
+      "android": "~input-zipcode",
+      "ios": "~input-zipcode"
+    }
+  },
+  "coloniaInput": {
+    "web": "[data-testid='colonia']",
+    "mobile": {
+      "android": "~input-colonia",
+      "ios": "~input-colonia"
+    }
+  },
+  "prefecturaInput": {
+    "web": "[data-testid='zip-code']",
+    "mobile": {
+      "android": "~input-zipcode",
+      "ios": "~input-zipcode"
+    }
+  },
+  "fullNameInput": {
+    "web": {
+      "responsive": "[data-testid='full-name-responsive']",
+      "desktop": "[data-testid='full-name-desktop']"
+    },
+    "mobile": "~input-fullname"
+  },
+  "phoneNumberInput": {
+    "web": {
+      "responsive": "[data-testid='phone-responsive']",
+      "desktop": "[data-testid='phone-desktop']"
+    },
+    "mobile": {
+      "android": "~input-phone",
+      "ios": "~input-phone"
+    }
+  },
+  "paymentMethodList": {
+    "web": "button[data-testid^='payment-']",
+    "mobile": {
+      "android": "android=new UiSelector().descriptionStartsWith(\"btn-payment-\")",
+      "ios": "-ios class chain:**/XCUIElementTypeOther[`name BEGINSWITH 'btn-payment-'`]"
+    }
+  },
+  "paymentCardButton": {
+    "web": {
+      "responsive": "button[data-testid='payment-card-responsive']",
+      "desktop": "button[data-testid='payment-card-desktop']"
+    },
+    "mobile": "~btn-payment-card"
+  },
+  "paymentCashButton": {
+    "web": "button[data-testid='payment-cash']",
+    "mobile": "~btn-payment-cash"
+  },
+  "cardHolderNameInput": {
+    "web": "[data-testid='card-holder']",
+    "mobile": "~input-card-holder"
+  },
+  "cardNumberInput": {
+    "web": "[data-testid='card-number']",
+    "mobile": {
+      "android": "android=new UiSelector().className(\"android.widget.EditText\").description(\"input-card-number\")",
+      "ios": "-ios predicate string:type == 'XCUIElementTypeTextField' AND name == 'input-card-number'"
+    }
+  },
+  "expiryDateInput": {
+    "web": "[data-testid='card-expiry']",
+    "mobile": "~input-card-expiry"
+  },
+  "cvvInput": {
+    "web": "[data-testid='card-cvv']",
+    "mobile": "~input-card-cvv"
+  },
+  "actionItemsList": {
+    "web": "button:has-text(\"Edit\"), button:has-text(\"Remove\")",
+    "mobile": {
+      "android": "android=new UiSelector().descriptionMatches(\"text-(edit|remove)-item.*\")",
+      "ios": "-ios class chain:**/XCUIElementTypeOther[`name BEGINSWITH 'btn-edit-item' OR name BEGINSWITH 'btn-remove-item'`]"
+    }
+  },
+  "orderDetailsList": {
+    "web": "div[data-testid^='order-']",
+    "mobile": {
+      "android": "android=new UiSelector().resourceIdMatches(\"(text-subtotal-label|text-subtotal-value|text-tip-label|text-tax-label|text-tax-value|text-delivery-label|text-delivery-value|text-total-label|text-total-value|text-item-title-item_.*|text-item-size-item_.*|text-item-price-item_.*)\")",
+      "ios": "-ios class chain:**/XCUIElementTypeStaticText[`name IN {\"text-subtotal-label\",\"text-subtotal-value\",\"text-tip-label\",\"text-tax-label\",\"text-tax-value\",\"text-delivery-label\",\"text-delivery-value\",\"text-total-label\",\"text-total-value\"} OR name BEGINSWITH \"text-item-title-item_\"`]"
+    }
+  },
+  "tipOptionsList": {
+    "web": "[data-testid^='order-tip-']",
+    "mobile": {
+      "android": "android=new UiSelector().descriptionMatches(\"btn-tip-(0|5|10|15)\")",
+      "ios": "-ios predicate string:name IN {'btn-tip-0','btn-tip-5','btn-tip-10','btn-tip-15'}"
+    }
+  },
+  "placeOrderButton": {
+    "web": {
+      "responsive": "[data-testid='place-order-btn-responsive']",
+      "desktop": "[data-testid='place-order-btn-desktop']"
+    },
+    "mobile": "~btn-place-order"
+  },
+  "orderSummaryTitle": {
+    "web": "[data-testid='order-summary-title']",
+    "mobile": "~text-section-summary"
+  },
+  "orderTotalValue": {
+    "web": "[data-testid='order-total']",
+    "mobile": "~text-total-value"
+  },
+  "orderSubtotalValue": {
+    "web": "[data-testid='order-subtotal']",
+    "mobile": "~text-subtotal-value"
+  },
+  "orderTaxValue": {
+    "web": "[data-testid='order-tax']",
+    "mobile": "~text-tax-value"
+  },
+  "orderDeliveryValue": {
+    "web": "[data-testid='order-delivery']",
+    "mobile": "~text-delivery-value"
+  }
+}

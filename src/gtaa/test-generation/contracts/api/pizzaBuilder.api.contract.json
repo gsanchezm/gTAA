@@ -1,0 +1,91 @@
+{
+  "feature": "pizzaBuilder",
+  "version": "1.0.0",
+  "baseUrlRef": "{{apiBaseUrl}}",
+  "endpoints": [
+    {
+      "id": "pizzaBuilder.listPizzas",
+      "description": "Existing /api/pizzas listing — reused by the builder for name → id resolution before deep-linking. The builder picks the pizza whose `name` field (case-insensitive) matches the feature's `<item>` column and uses its `id` as the `?item=` query value.",
+      "method": "GET",
+      "path": "/api/pizzas",
+      "headersTemplate": {
+        "Authorization": "Bearer {{authToken}}",
+        "Accept": "application/json",
+        "Accept-Language": "{{language}}",
+        "x-country-code": "{{market}}"
+      },
+      "expect": {
+        "status": [200],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonPathAssertions": [
+          { "path": "$.pizzas", "matches": ".*" },
+          { "path": "$.country_code", "matches": "^(US|MX|CH|JP)$" }
+        ]
+      },
+      "extract": [
+        { "name": "pizzas",       "from": "body", "path": "$.pizzas" },
+        { "name": "currency",     "from": "body", "path": "$.currency" }
+      ],
+      "tags": ["@api", "@pizzaBuilder", "@catalog"],
+      "telemetry": { "enabled": true, "emitOnLoad": false }
+    },
+    {
+      "id": "pizzaBuilder.addCustomizedToCart",
+      "description": "Builder-extended /api/cart POST. Same endpoint as checkout's addToCart but the line items carry a `toppings: string[]` field per the customizer's user-selected toppings. Backend stores them on the cart row's `config.toppings` (see CheckoutDao's CartItemResponse.config.toppings). On older deployments that don't yet honor toppings, the cart line falls back to {pizza_id, size, quantity} silently — flagged here as an explicit contract expectation so the contract validator catches the regression.",
+      "method": "POST",
+      "path": "/api/cart",
+      "headersTemplate": {
+        "Authorization": "Bearer {{authToken}}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "x-country-code": "{{market}}"
+      },
+      "bodyTemplate": {
+        "items": [
+          {
+            "pizza_id": "{{pizzaId}}",
+            "size": "{{size}}",
+            "quantity": 1,
+            "toppings": "{{toppings}}"
+          }
+        ]
+      },
+      "expect": {
+        "status": [200, 201],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonPathAssertions": [
+          { "path": "$.cart_items[0].pizza_id",        "matches": ".+" },
+          { "path": "$.cart_items[0].config.size",     "matches": "^(Small|Medium|Large|Family)$" },
+          { "path": "$.cart_items[0].config.toppings", "matches": ".*" }
+        ]
+      },
+      "extract": [
+        { "name": "cartItems",   "from": "body", "path": "$.cart_items" },
+        { "name": "updatedAt",   "from": "body", "path": "$.updated_at" }
+      ],
+      "tags": ["@api", "@pizzaBuilder", "@cart"],
+      "telemetry": { "enabled": true, "emitOnLoad": false }
+    },
+    {
+      "id": "pizzaBuilder.customizerDeepLink",
+      "description": "TDD-style expectation — NOT a backing HTTP endpoint, but documented here so the contract surface captures the FE expectation. The atomic builder entry depends on the OmniPizza frontend honoring `/customizer?item=<pizzaId>&market=<MARKET>&language=<lang>` (web) and `omnipizza://customizer?item=<pizzaId>&market=<MARKET>&language=<lang>` (mobile). When the resolved pizza id maps to no pizza, the FE renders an empty customizer; this contract is satisfied once the FE wires the route. Until then, scenarios that exercise this entry will fail with `pizzaBuilderScreen` (mobile) or `confirmAddToCartButton` (web) not visible.",
+      "method": "GET",
+      "path": "/customizer",
+      "headersTemplate": {
+        "Accept": "text/html",
+        "Accept-Language": "{{language}}"
+      },
+      "expect": {
+        "status": [200],
+        "headers": {}
+      },
+      "extract": [],
+      "tags": ["@frontend", "@pizzaBuilder", "@deeplink", "@tdd"],
+      "telemetry": { "enabled": false, "emitOnLoad": false }
+    }
+  ]
+}

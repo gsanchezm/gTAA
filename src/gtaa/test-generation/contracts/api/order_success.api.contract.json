@@ -1,0 +1,61 @@
+{
+  "feature": "order_success",
+  "version": "1.0.0",
+  "baseUrlRef": "{{apiBaseUrl}}",
+  "endpoints": [
+    {
+      "id": "order_success.getOrder",
+      "description": "Fetch a placed order by id. Backing endpoint for the atomic order-success deep link: useDeepLinkParams.ts (mobile) and OrderSuccess.jsx (web) call this on mount to hydrate `lastOrder` so the success screen can render without going through the checkout UI.",
+      "method": "GET",
+      "path": "/api/orders/{{orderId}}",
+      "headersTemplate": {
+        "Authorization": "Bearer {{authToken}}",
+        "Accept": "application/json",
+        "Accept-Language": "{{language}}",
+        "x-country-code": "{{market}}"
+      },
+      "expect": {
+        "status": [200],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonPathAssertions": [
+          { "path": "$.order_id", "matches": "^[A-Za-z0-9_-]{4,}$" },
+          { "path": "$.total", "matches": "^[0-9]+(\\.[0-9]+)?$" },
+          { "path": "$.currency", "matches": "^[A-Z]{3}$" }
+        ]
+      },
+      "extract": [
+        { "name": "orderId",  "from": "body", "path": "$.order_id" },
+        { "name": "subtotal", "from": "body", "path": "$.subtotal" },
+        { "name": "tax",      "from": "body", "path": "$.tax" },
+        { "name": "total",    "from": "body", "path": "$.total" },
+        { "name": "currency", "from": "body", "path": "$.currency" }
+      ],
+      "tags": ["@api", "@order_success", "@orders"],
+      "telemetry": { "enabled": true, "emitOnLoad": false }
+    },
+    {
+      "id": "order_success.listOrders",
+      "description": "List all orders for the authenticated user. Not used by the success-screen render path, but exposes the same orders table — useful as a sanity/smoke probe for the Orders API tier.",
+      "method": "GET",
+      "path": "/api/orders",
+      "headersTemplate": {
+        "Authorization": "Bearer {{authToken}}",
+        "Accept": "application/json"
+      },
+      "expect": {
+        "status": [200],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonPathAssertions": [
+          { "path": "$.orders", "matches": ".*" }
+        ]
+      },
+      "extract": [],
+      "tags": ["@api", "@order_success", "@orders", "@listing"],
+      "telemetry": { "enabled": true, "emitOnLoad": false }
+    }
+  ]
+}

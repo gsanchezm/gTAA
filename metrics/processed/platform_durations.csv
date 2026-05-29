@@ -1,0 +1,4 @@
+platform,tool_name,count,p50_duration_ms,p95_duration_ms,p99_duration_ms,mean_duration_ms,min_duration_ms,max_duration_ms,architecture_type,repository_name,experiment_batch_id,run_index,workflow_run_id,workflow_attempt,tool_name,platform,viewport,generated_at
+android,playwright,2,2637.5,2671.25,2674.25,2637.5,2600,2675,GTAA_BASELINE,gTAA,sample-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,playwright,android,android,2026-05-29T05:10:05.769Z
+desktop,playwright,2,1225,1247.5,1249.5,1225,1200,1250,GTAA_BASELINE,gTAA,sample-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,playwright,desktop,desktop,2026-05-29T05:10:05.769Z
+responsive,playwright,2,1860,1914,1918.8,1860,1800,1920,GTAA_BASELINE,gTAA,sample-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,playwright,responsive,responsive,2026-05-29T05:10:05.769Z

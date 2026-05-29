@@ -1,0 +1,94 @@
+{
+  "loginScreen": {
+    "web": "body",
+    "mobile": "~screen-login"
+  },
+  "appLogo": {
+    "mobile": "~img-logo"
+  },
+  "appNameText": {
+    "mobile": "~text-app-name"
+  },
+  "welcomeTitleText": {
+    "web": "h2.text-3xl",
+    "mobile": "~text-welcome-title"
+  },
+  "subtitleText": {
+    "web": "p.text-gray-400",
+    "mobile": "~text-login-subtitle"
+  },
+  "marketButtonList": {
+    "web": "[data-testid^='market-']",
+    "mobile": {
+      "android": "android=new UiSelector().descriptionStartsWith(\"btn-market-\")",
+      "ios": "-ios class chain:**/XCUIElementTypeOther[`name BEGINSWITH 'btn-market-'`]"
+    }
+  },
+  "switzerlandLanguageList": {
+    "web": "[data-testid^='lang-']",
+    "mobile": {
+      "android": "android=new UiSelector().descriptionStartsWith(\"btn-lang-\")",
+      "ios": "-ios class chain:**/XCUIElementTypeOther[`name BEGINSWITH 'btn-lang-'`]"
+    }
+  },
+  "logoutButton": {
+    "web": {
+      "desktop": "[data-testid='logout-btn']",
+      "responsive": "[data-testid='mobile-logout-btn']"
+    },
+    "mobile": "~btn-logout"
+  },
+  "usernameInput": {
+    "web": {
+      "responsive": "[data-testid='username-responsive']",
+      "desktop": "[data-testid='username-desktop']"
+    },
+    "mobile": "~input-username"
+  },
+  "passwordInput": {
+    "web": {
+      "responsive": "[data-testid='password-responsive']",
+      "desktop": "[data-testid='password-desktop']"
+    },
+    "mobile": "~input-password"
+  },
+  "togglePasswordButton": {
+    "web": "[data-testid='toggle-password']"
+  },
+  "marketSelectionContainer": {
+    "mobile": "~view-market-selection"
+  },
+  "marketFlag": {
+    "mobile": {
+      "android": "android=new UiSelector().descriptionStartsWith(\"text-flag-\")",
+      "ios": "-ios class chain:**/XCUIElementTypeStaticText[`name BEGINSWITH 'text-flag-'`]"
+    }
+  },
+  "loginButton": {
+    "web": {
+      "responsive": "[data-testid='login-button-responsive']",
+      "desktop": "[data-testid='login-button-desktop']"
+    },
+    "mobile": "~btn-login"
+  },
+  "loginError": {
+    "web": "[data-testid='login-error']",
+    "mobile": "~text-login-error"
+  },
+  "quickLoginLabel": {
+    "mobile": "~text-quick-login-label"
+  },
+  "quickLoginUserList": {
+    "web": "[data-testid^='user-']",
+    "mobile": {
+      "android": "android=new UiSelector().descriptionStartsWith(\"btn-user-\")",
+      "ios": "-ios class chain:**/XCUIElementTypeOther[`name BEGINSWITH 'btn-user-'`]"
+    }
+  },
+  "quickLoginUserLabel": {
+    "mobile": {
+      "android": "android=new UiSelector().descriptionStartsWith(\"text-user-label-\")",
+      "ios": "-ios class chain:**/XCUIElementTypeStaticText[`name BEGINSWITH 'text-user-label-'`]"
+    }
+  }
+}

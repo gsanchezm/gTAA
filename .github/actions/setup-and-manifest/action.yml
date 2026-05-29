@@ -1,0 +1,56 @@
+# ---------------------------------------------------------------------------
+# Composite action: setup-and-manifest
+# ---------------------------------------------------------------------------
+# Reusable steps shared by every gTAA tool job:
+#   1. Checkout (assumed already done by caller, kept optional here)
+#   2. Install pnpm (pnpm/action-setup)
+#   3. Setup Node 22 with pnpm cache (actions/setup-node@v4)
+#   4. pnpm install (frozen lockfile when available)
+#   5. Generate the run manifest (pnpm metrics:manifest) BEFORE any tests
+#
+# The manifest captures experiment context (batch id, run index, tool, env)
+# so that every artifact can be traced back to a specific experiment run.
+# ---------------------------------------------------------------------------
+name: "gTAA setup and manifest"
+description: "Install pnpm/Node 22, install deps, and generate the pre-test run manifest."
+
+inputs:
+  node-version:
+    description: "Node.js version to install."
+    required: false
+    default: "22"
+  pnpm-version:
+    description: "pnpm version to install."
+    required: false
+    default: "9"
+  install-args:
+    description: "Extra args passed to pnpm install."
+    required: false
+    default: "--frozen-lockfile"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: ${{ inputs.pnpm-version }}
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: "pnpm"
+
+    # Fall back to a non-frozen install if the lockfile is out of sync so the
+    # metrics pipeline can still run in CI environments without a live app.
+    - name: Install dependencies
+      shell: bash
+      run: |
+        pnpm install ${{ inputs.install-args }} || pnpm install
+
+    # Pre-test manifest: records experiment metadata before execution starts.
+    - name: Generate run manifest
+      shell: bash
+      run: |
+        pnpm metrics:manifest || true

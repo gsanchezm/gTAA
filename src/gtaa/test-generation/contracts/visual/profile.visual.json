@@ -1,0 +1,48 @@
+{
+  "feature": "profile",
+  "version": "1.0.0",
+  "defaults": {
+    "thresholds": { "pixelRatio": 0.01 },
+    "platforms": ["web", "android", "ios"],
+    "viewports": ["desktop", "responsive", "mobile"]
+  },
+  "snapshots": [
+    {
+      "id": "profile_card_render",
+      "description": "Profile card render on web — avatar, username + premium badge, and the empty edit form inputs in their initial (pre-edit) state. Bound to the @ui-only branch of the matrix that ALSO carries @desktop/@responsive so the snapshot only fires on web (the mobile-only `profile_form_labels` snapshot covers the equivalent native render).",
+      "regionRef": "profileFullNameInput",
+      "maskRefs": ["profileFullNameInput", "profilePhoneNumberInput", "notesInput"],
+      "platforms": ["web"],
+      "viewports": ["desktop", "responsive"],
+      "thresholds": { "pixelRatio": 0.01 },
+      "tags": ["@visual", "@profile", "@ui-only", "@desktop", "@responsive"],
+      "telemetry": { "enabled": true, "emitOnLoad": false }
+    },
+    {
+      "id": "profile_form_labels",
+      "description": "Translated form labels region — fullName / phone / address / notes labels rendered in the active market language. Mobile-only because the labels live in the locator file under the `mobile` key only (web uses placeholder text on the inputs). Captured via the fullName input as the region anchor — the label sits immediately above it.",
+      "regionRef": "profileFullNameInput",
+      "maskRefs": [
+        "profileFullNameInput",
+        "profilePhoneNumberInput",
+        "notesInput"
+      ],
+      "platforms": ["android", "ios"],
+      "viewports": ["mobile"],
+      "thresholds": { "pixelRatio": 0.005 },
+      "tags": ["@visual", "@profile", "@ui-only", "@android", "@ios"],
+      "telemetry": { "enabled": true, "emitOnLoad": false }
+    },
+    {
+      "id": "profile_post_save",
+      "description": "Profile after a successful save and reload — values persisted, save button at rest. Tagged so it only matches the persistence scenario (which lacks @ui-only); the card-render and form-label snapshots above cover the pre-update render path.",
+      "regionRef": "profileFullNameInput",
+      "maskRefs": ["profilePhoneNumberInput", "notesInput"],
+      "platforms": ["web", "android", "ios"],
+      "viewports": ["desktop", "responsive", "mobile"],
+      "thresholds": { "pixelRatio": 0.01 },
+      "tags": ["@visual", "@profile", "@desktop", "@responsive"],
+      "telemetry": { "enabled": true, "emitOnLoad": false }
+    }
+  ]
+}

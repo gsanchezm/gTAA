@@ -1,0 +1,31 @@
+{
+  "architecture_type": "GTAA_BASELINE",
+  "repository_name": "gTAA",
+  "experiment_batch_id": "local-batch",
+  "run_index": "0",
+  "generated_at": "2026-05-29T05:10:10.863Z",
+  "totals": {
+    "scenarios_in_features": 22,
+    "scenario_telemetry_events": 6,
+    "scenarios_passed": 5,
+    "api_events": 1,
+    "api_passed": 1,
+    "visual_events": 1,
+    "visual_passed": 1,
+    "performance_simulations": 1,
+    "failure_events": 1
+  },
+  "pass_rate_pct": 83.33,
+  "coverage_by_platform": {
+    "desktop": 17,
+    "responsive": 15,
+    "android": 18,
+    "ios": 18,
+    "api": 8,
+    "performance": 3,
+    "visual": 21
+  },
+  "failure_buckets": {
+    "UI_ACTION_FAILURE": 1
+  }
+}

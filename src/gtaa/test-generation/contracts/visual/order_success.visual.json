@@ -1,0 +1,33 @@
+{
+  "feature": "order_success",
+  "version": "1.0.0",
+  "defaults": {
+    "thresholds": { "pixelRatio": 0.01 },
+    "platforms": ["web", "android", "ios"],
+    "viewports": ["desktop", "responsive", "mobile"]
+  },
+  "snapshots": [
+    {
+      "id": "order_success_screen_landed",
+      "description": "Order success screen on first render — live tracking badge, status title in the active locale, time-window block, courier card (name/vehicle/rating), and order-details affordance. lastOrder hydrated via deep-link orderId (mobile) or ?orderId query (web).",
+      "regionRef": "orderSuccessScreen",
+      "maskRefs": ["orderIdLabel", "orderTotalText", "timeEstimateText"],
+      "platforms": ["web", "android", "ios"],
+      "viewports": ["desktop", "responsive", "mobile"],
+      "thresholds": { "pixelRatio": 0.01 },
+      "tags": ["@visual", "@order_success"],
+      "telemetry": { "enabled": true, "emitOnLoad": false }
+    },
+    {
+      "id": "order_success_courier_card",
+      "description": "Courier card region (name, vehicle, rating, chat/call CTAs). Tighter threshold than the full-screen snapshot because the card has fewer dynamic elements once data hydrates.",
+      "regionRef": "courierInfoContainer",
+      "maskRefs": ["courierRatingText"],
+      "platforms": ["web", "android", "ios"],
+      "viewports": ["desktop", "responsive", "mobile"],
+      "thresholds": { "pixelRatio": 0.005 },
+      "tags": ["@visual", "@order_success", "@courier"],
+      "telemetry": { "enabled": true, "emitOnLoad": false }
+    }
+  ]
+}

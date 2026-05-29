@@ -1,0 +1,87 @@
+{
+  "pizzaBuilderScreen": {
+    "web": "div[class*=\"max-h-[90vh]\"]",
+    "mobile": "~screen-pizza-builder"
+  },
+  "builderTitleText": {
+    "mobile": "~text-builder-title"
+  },
+  "closeBuilderButton": {
+    "web": "[data-testid='customizer-close']",
+    "mobile": "~btn-close-builder"
+  },
+  "builderPizzaImage": {
+    "mobile": "~img-builder-pizza"
+  },
+  "sectionSizeText": {
+    "mobile": "~text-section-size"
+  },
+  "requiredBadgeText": {
+    "mobile": "~text-badge-required"
+  },
+  "sizeOptionsContainer": {
+    "mobile": "~view-size-pills"
+  },
+  "sizeOptionsList": {
+    "web": "[data-testid^='size-']",
+    "mobile": {
+      "android": "android=new UiSelector().descriptionStartsWith(\"btn-size-\")",
+      "ios": "-ios class chain:**/XCUIElementTypeOther[`name BEGINSWITH 'btn-size-'`]"
+    }
+  },
+  "sizeOptionLabel": {
+    "mobile": {
+      "android": "android=new UiSelector().resourceIdMatches(\"text-size-(?!price-).*\")",
+      "ios": "-ios class chain:**/XCUIElementTypeStaticText[`name BEGINSWITH 'text-size-' AND NOT (name BEGINSWITH 'text-size-price-')`]"
+    }
+  },
+  "sizeOptionPrice": {
+    "mobile": {
+      "android": "android=new UiSelector().descriptionStartsWith(\"text-size-price-\")",
+      "ios": "-ios class chain:**/XCUIElementTypeStaticText[`name BEGINSWITH 'text-size-price-'`]"
+    }
+  },
+  "sectionToppingsText": {
+    "mobile": "~text-section-toppings"
+  },
+  "toppingsHintText": {
+    "mobile": "~text-toppings-hint"
+  },
+  "toppingGroupList": {
+    "mobile": {
+      "android": "android=new UiSelector().descriptionStartsWith(\"text-topping-group-\")",
+      "ios": "-ios class chain:**/XCUIElementTypeStaticText[`name BEGINSWITH 'text-topping-group-'`]"
+    }
+  },
+  "toppingGroupTitle": {
+    "mobile": {
+      "android": "android=new UiSelector().descriptionStartsWith(\"text-topping-group-\")",
+      "ios": "-ios class chain:**/XCUIElementTypeStaticText[`name BEGINSWITH 'text-topping-group-'`]"
+    }
+  },
+  "toppingsList": {
+    "web": "[data-testid^='topping-']",
+    "mobile": {
+      "android": "android=new UiSelector().descriptionStartsWith(\"btn-topping-\")",
+      "ios": "-ios class chain:**/XCUIElementTypeOther[`name BEGINSWITH 'btn-topping-'`]"
+    }
+  },
+  "toppingLabel": {
+    "mobile": {
+      "android": "android=new UiSelector().resourceIdMatches(\"text-topping-(?!group-).*\")",
+      "ios": "-ios class chain:**/XCUIElementTypeStaticText[`name BEGINSWITH 'text-topping-' AND NOT (name BEGINSWITH 'text-topping-group-')`]"
+    }
+  },
+  "customizerPriceText": {
+    "web": "[data-testid='customizer-price']"
+  },
+  "estimatedTotalLabel": {
+    "mobile": "~text-estimated-total-label"
+  },
+  "estimatedTotalValue": {
+    "mobile": "~text-estimated-total-value"
+  },
+  "confirmAddToCartButton": {
+    "web": "[data-testid='confirm-add-to-cart']"
+  }
+}

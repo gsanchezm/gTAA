@@ -1,0 +1,42 @@
+/**
+ * Test Execution layer — Appium Android executor.
+ *
+ * Concrete UiDriver backend for Android via Appium + UiAutomator2. All defensive
+ * interaction logic lives in the shared base (AppiumExecutorBase) and the Test
+ * Adaptation mobile-actions helpers (DRY); this class contributes only the
+ * Android-specific capabilities and the 'android' platform discriminator (which
+ * selects UiScrollable scrolling and the android selector family).
+ *
+ * RELATIVE imports only.
+ */
+
+import { AppiumExecutorBase } from './appium-executor-base';
+import { mobileConfig, type MobileConfig } from '../../configuration/environments/env';
+import type { ExecutionContext } from '../../shared/types';
+import type { MobilePlatformKind } from '../../test-adaptation/drivers/appium/mobile-actions';
+
+export class AppiumAndroidExecutor extends AppiumExecutorBase {
+  protected readonly platformKind: MobilePlatformKind = 'android';
+
+  constructor(executionContext: ExecutionContext, config: MobileConfig = mobileConfig()) {
+    super(executionContext, config);
+  }
+
+  protected buildCapabilities(): Record<string, unknown> {
+    const android = this.config.android;
+    const caps: Record<string, unknown> = {
+      platformName: 'Android',
+      'appium:automationName': 'UiAutomator2',
+      'appium:deviceName': android.deviceName,
+    };
+
+    if (android.platformVersion) {
+      caps['appium:platformVersion'] = android.platformVersion;
+    }
+    if (android.appPath) {
+      caps['appium:app'] = android.appPath;
+    }
+
+    return caps;
+  }
+}

@@ -1,0 +1,2 @@
+run_id,endpoint_id,method,path,response_status,response_time_ms,assertion_count,failed_assertions,status,duration_ms,failure_bucket,architecture_type,repository_name,experiment_batch_id,run_index,workflow_run_id,workflow_attempt,tool_name,platform,viewport,generated_at
+sample-run-0,createOrder,POST,/api/orders,201,198,4,0,PASS,240,,GTAA_BASELINE,gTAA,sample-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,api,api,api,2026-05-29T05:10:06.622Z

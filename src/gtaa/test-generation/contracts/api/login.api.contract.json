@@ -1,0 +1,65 @@
+{
+  "feature": "login",
+  "version": "1.1.0",
+  "baseUrlRef": "{{apiBaseUrl}}",
+  "endpoints": [
+    {
+      "id": "login.authenticate",
+      "description": "Exchange credentials for an access token. Used by DAOs to seed $S_0$ state and by the gatling resonance suite for load tests.",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "headersTemplate": {
+        "Content-Type": "application/json",
+        "Accept-Language": "{{language}}",
+        "X-Market": "{{market}}"
+      },
+      "bodyTemplate": {
+        "username": "{{username}}",
+        "password": "{{password}}"
+      },
+      "expect": {
+        "status": [200],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonPathAssertions": [
+          { "path": "$.token", "matches": "^[A-Za-z0-9._-]{10,}$" }
+        ]
+      },
+      "extract": [
+        { "name": "accessToken", "from": "body", "path": "$.token" },
+        { "name": "userId",      "from": "body", "path": "$.user.id" }
+      ],
+      "tags": ["@api", "@login", "@auth"],
+      "telemetry": { "enabled": true, "emitOnLoad": false }
+    },
+    {
+      "id": "login.authenticate.invalid",
+      "description": "Negative authentication path covering wrong, missing, or locked-out credentials. Returns a 4xx with a backend-supplied error message (422 pydantic too_short, 401 invalid username/password, 403 user locked out).",
+      "method": "POST",
+      "path": "/api/auth/login",
+      "headersTemplate": {
+        "Content-Type": "application/json",
+        "Accept-Language": "{{language}}",
+        "X-Market": "{{market}}"
+      },
+      "bodyTemplate": {
+        "username": "{{username}}",
+        "password": "{{password}}"
+      },
+      "expect": {
+        "status": [400, 401, 403, 422],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonPathAssertions": [
+          { "path": "$.error",       "matches": "(?i).*(invalid|locked|user|password).*" },
+          { "path": "$.status_code", "matches": "^(400|401|403|422)$" }
+        ]
+      },
+      "extract": [],
+      "tags": ["@api", "@login", "@invalid"],
+      "telemetry": { "enabled": true, "emitOnLoad": false }
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "lib": ["ES2022", "DOM"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": false,
+    "sourceMap": false,
+    "outDir": "dist",
+    "baseUrl": ".",
+    "types": ["node"],
+    "paths": {
+      "@gtaa/*": ["src/gtaa/*"],
+      "@generation/*": ["src/gtaa/test-generation/*"],
+      "@definition/*": ["src/gtaa/test-definition/*"],
+      "@execution/*": ["src/gtaa/test-execution/*"],
+      "@adaptation/*": ["src/gtaa/test-adaptation/*"],
+      "@reporting/*": ["src/gtaa/test-reporting/*"],
+      "@configuration/*": ["src/gtaa/configuration/*"],
+      "@shared/*": ["src/gtaa/shared/*"]
+    }
+  },
+  "include": ["src/**/*", "scripts/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

@@ -1,0 +1,44 @@
+{
+  "feature": "navbar",
+  "version": "1.0.0",
+  "defaults": {
+    "thresholds": { "pixelRatio": 0.01 },
+    "platforms": ["web", "android", "ios"],
+    "viewports": ["desktop", "responsive", "mobile"]
+  },
+  "snapshots": [
+    {
+      "id": "navbar_desktop_strip",
+      "description": "Desktop navbar strip — logo, catalog/checkout/profile links localized per market language. regionRef anchors on navLogo (the only web-stable navbar key in the locator file); pixelmatch falls back to fullPage when the region is unavailable, so the captured PNG still covers the entire navbar visually even though the contract names a logo anchor. Bucketed per (market, language) for 5 buckets: US/en, MX/es, CH/de, CH/fr, JP/ja.",
+      "regionRef": "navLogo",
+      "maskRefs": [],
+      "platforms": ["web"],
+      "viewports": ["desktop"],
+      "thresholds": { "pixelRatio": 0.01 },
+      "tags": ["@visual", "@navbar", "@desktop", "@ui-only"],
+      "telemetry": { "enabled": true, "emitOnLoad": false }
+    },
+    {
+      "id": "navbar_mobile_menu_opened",
+      "description": "Mobile navigation menu in its opened state. On web-responsive the hamburger drawer is open with catalog/checkout/profile/logout entries; on native (android/ios) the bottom-nav strip is always visible and we capture that strip. regionRef anchors on mobileMenuButton (web key) — falls back to fullPage on native so the bottom strip is captured anyway. Bucketed per (market, language) for 5 buckets.",
+      "regionRef": "mobileMenuButton",
+      "maskRefs": [],
+      "platforms": ["web", "android", "ios"],
+      "viewports": ["responsive", "mobile"],
+      "thresholds": { "pixelRatio": 0.015 },
+      "tags": ["@visual", "@navbar", "@ui-only"],
+      "telemetry": { "enabled": true, "emitOnLoad": false }
+    },
+    {
+      "id": "navbar_header_language_switcher",
+      "description": "Header language switcher panel after switching the locale on CH. The catalog screen has re-rendered with the new translations, and the active language button reflects the new selection. regionRef anchors on languageDEButton (present on both web and mobile). CH-only by design — the only market with a runtime DE/FR picker — bucketed per (market='CH', language=target) for 2 buckets: CH/de, CH/fr.",
+      "regionRef": "languageDEButton",
+      "maskRefs": [],
+      "platforms": ["web", "android", "ios"],
+      "viewports": ["desktop", "responsive", "mobile"],
+      "thresholds": { "pixelRatio": 0.02 },
+      "tags": ["@visual", "@navbar"],
+      "telemetry": { "enabled": true, "emitOnLoad": false }
+    }
+  ]
+}

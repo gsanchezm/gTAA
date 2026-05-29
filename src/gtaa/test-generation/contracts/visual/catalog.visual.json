@@ -1,0 +1,44 @@
+{
+  "feature": "catalog",
+  "version": "1.0.0",
+  "defaults": {
+    "thresholds": { "pixelRatio": 0.01 },
+    "platforms": ["web", "android", "ios"],
+    "viewports": ["desktop", "responsive", "mobile"]
+  },
+  "snapshots": [
+    {
+      "id": "catalog_screen",
+      "description": "Full catalog screen on first render — section header, category chips, pizza grid with localized names + add-to-cart labels. Captured at scenario end; baselines bucket by (market, language) via the visual hook's options payload, so US/en, MX/es, CH/de, CH/fr, JP/ja each get a distinct baseline path. This 2-tag snapshot fires on every @visual catalog scenario today (none carry @search/@filter/@card), so it doubles as the catch-all visual signal for search-cleared and filter-cleared end states too.",
+      "regionRef": "catalogScreen",
+      "maskRefs": ["searchInput"],
+      "platforms": ["web", "android", "ios"],
+      "viewports": ["desktop", "responsive", "mobile"],
+      "thresholds": { "pixelRatio": 0.01 },
+      "tags": ["@visual", "@catalog"],
+      "telemetry": { "enabled": true, "emitOnLoad": false }
+    },
+    {
+      "id": "catalog_search_results",
+      "description": "Catalog after a search query has narrowed the visible grid (e.g. only Pepperoni cards). Future expansion — activated when a feature scenario carries the @search tag. The visual hook's longest-tag-match rule keeps this entry dormant until then; it lives in the contract now so adding the tag in a future PR doesn't also require a contract change.",
+      "regionRef": "pizzaCardList",
+      "maskRefs": ["searchInput"],
+      "platforms": ["web", "android", "ios"],
+      "viewports": ["desktop", "responsive", "mobile"],
+      "thresholds": { "pixelRatio": 0.01 },
+      "tags": ["@visual", "@catalog", "@search"],
+      "telemetry": { "enabled": true, "emitOnLoad": false }
+    },
+    {
+      "id": "catalog_filtered_grid",
+      "description": "Catalog after a category chip has narrowed the visible grid (e.g. only classic pizzas). Future expansion — activated when a feature scenario carries the @filter tag. Same dormancy contract as catalog_search_results.",
+      "regionRef": "pizzaCardList",
+      "maskRefs": [],
+      "platforms": ["web", "android", "ios"],
+      "viewports": ["desktop", "responsive", "mobile"],
+      "thresholds": { "pixelRatio": 0.01 },
+      "tags": ["@visual", "@catalog", "@filter"],
+      "telemetry": { "enabled": true, "emitOnLoad": false }
+    }
+  ]
+}

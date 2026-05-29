@@ -1,0 +1,77 @@
+# ===========================================================================
+# gTAA Update Visual Baselines (manual dispatch only)
+# ===========================================================================
+# Runs the visual suites with UPDATE_VISUAL_BASELINE=true so the pixelmatch
+# baselines are regenerated, then uploads the refreshed baselines as an
+# artifact for review / commit. This is intentionally separate from the main
+# experiment workflow so baseline updates are a deliberate, manual action.
+# ===========================================================================
+name: gTAA Update Visual Baselines
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_environment:
+        description: "Environment whose UI is captured as the new baseline."
+        type: choice
+        required: false
+        default: local
+        options:
+          - local
+          - staging
+          - prod
+
+env:
+  ARCHITECTURE_TYPE: GTAA_BASELINE
+  REPOSITORY_NAME: gTAA
+  TARGET_ENVIRONMENT: ${{ github.event.inputs.target_environment || 'local' }}
+  # Force baseline update mode for the visual scripts.
+  UPDATE_VISUAL_BASELINE: "true"
+
+permissions:
+  contents: read
+
+jobs:
+  update-baselines:
+    name: Update visual baselines
+    runs-on: ubuntu-latest
+    env:
+      TOOL_NAME: pixelmatch
+      GTAA_PLATFORM: web
+      GTAA_DRIVER: pixelmatch
+      GTAA_VISUAL: "true"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup + manifest
+        uses: ./.github/actions/setup-and-manifest
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps || pnpm exec playwright install || true
+
+      # With UPDATE_VISUAL_BASELINE=true these runs write new baselines.
+      - name: Update visual baselines (desktop)
+        run: pnpm test:visual:desktop || true
+
+      - name: Update visual baselines (responsive)
+        run: pnpm test:visual:responsive || true
+
+      # Upload the refreshed baselines for review. Adjust the path globs below
+      # to match where the visual scripts persist baseline snapshots in this
+      # repo (common locations covered).
+      - name: Upload updated baselines
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gtaa-visual-baselines
+          path: |
+            **/__screenshots__/**
+            **/*-snapshots/**
+            **/baselines/**
+            tests/**/visual/**
+            metrics/raw/**
+            metrics/processed/**
+            results/**
+          if-no-files-found: warn
+          retention-days: 90

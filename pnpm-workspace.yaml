@@ -1,0 +1,7 @@
+allowBuilds:
+  appium: set this to true or false
+  appium-ios-tuntap: set this to true or false
+  edgedriver: set this to true or false
+  esbuild: set this to true or false
+  geckodriver: set this to true or false
+  sharp: set this to true or false

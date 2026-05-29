@@ -1,0 +1,37 @@
+{
+  "feature": "catalog",
+  "version": "1.0.0",
+  "baseUrlRef": "{{apiBaseUrl}}",
+  "endpoints": [
+    {
+      "id": "catalog.getPizzas",
+      "description": "Fetch the localized pizza catalog for a market. Single source of truth for both the catalog grid (read) and the cart-selection step on the checkout slice. The backend keys the catalog off the `x-country-code` header (NOT a query param) and reads the language from `X-Language`; the response is an envelope { pizzas, country_code, currency } that the DAO unwraps for callers.",
+      "method": "GET",
+      "path": "/api/pizzas",
+      "headersTemplate": {
+        "Authorization": "Bearer {{authToken}}",
+        "Accept": "application/json",
+        "X-Language": "{{language}}",
+        "x-country-code": "{{market}}"
+      },
+      "expect": {
+        "status": [200],
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "jsonPathAssertions": [
+          { "path": "$.pizzas",       "matches": ".*" },
+          { "path": "$.country_code", "matches": "^(US|MX|CH|JP)$" },
+          { "path": "$.currency",     "matches": "^[A-Z]{3}$" }
+        ]
+      },
+      "extract": [
+        { "name": "pizzas",      "from": "body", "path": "$.pizzas" },
+        { "name": "countryCode", "from": "body", "path": "$.country_code" },
+        { "name": "currency",    "from": "body", "path": "$.currency" }
+      ],
+      "tags": ["@api", "@catalog", "@pizzas"],
+      "telemetry": { "enabled": true, "emitOnLoad": false }
+    }
+  ]
+}

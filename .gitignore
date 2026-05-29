@@ -1,0 +1,21 @@
+node_modules/
+dist/
+.env
+.env.local
+
+# Test execution artifacts
+results/
+reports/
+logs/
+visual-results/
+target/gatling/
+
+# Keep metrics directory structure but ignore generated run artifacts only when requested
+# (Generated metrics under metrics/raw and metrics/processed are committed as experiment evidence.)
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
