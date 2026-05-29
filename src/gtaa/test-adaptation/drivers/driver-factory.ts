@@ -2,9 +2,9 @@
  * Test Adaptation layer — direct UI driver factory.
  *
  * Constructs the concrete executor for the active ExecutionContext. This is a
- * plain layered factory (a switch over normal services), NOT a plugin registry
- * and NOT a microkernel — there is no dynamic registration, no process spawning,
- * and no proxy. Adding a tool means adding a case here and an executor service.
+ * plain layered factory (a switch over normal services): there is no dynamic
+ * registration, no process spawning, and no central routing layer. Adding a
+ * tool means adding a case here and an executor service.
  */
 import { PlaywrightWebExecutor } from '../../test-execution/playwright/playwright-web-executor';
 import { AppiumAndroidExecutor } from '../../test-execution/appium/appium-android-executor';

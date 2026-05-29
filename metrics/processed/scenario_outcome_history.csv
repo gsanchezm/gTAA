@@ -1,7 +1,7 @@
 architecture_type,experiment_batch_id,run_index,run_id,tool_name,platform,viewport,feature,scenario,status,failure_bucket,duration_ms,timestamp,generated_at
-GTAA_BASELINE,sample-batch,0,sample-run-0,playwright,desktop,desktop,Browse Catalog,View the pizza catalog,PASS,,1200,2026-01-01T00:00:00.000Z,2026-05-29T05:10:09.879Z
-GTAA_BASELINE,sample-batch,0,sample-run-0,playwright,responsive,responsive,Customize Pizza,Customize a pizza,PASS,,1800,2026-01-01T00:00:00.000Z,2026-05-29T05:10:09.879Z
-GTAA_BASELINE,sample-batch,0,sample-run-0,playwright,android,android,Place Delivery Order,Place a delivery order,PASS,,2600,2026-01-01T00:00:00.000Z,2026-05-29T05:10:09.879Z
-GTAA_BASELINE,sample-batch,1,sample-run-1,playwright,desktop,desktop,Browse Catalog,View the pizza catalog,PASS,,1250,2026-01-02T00:00:00.000Z,2026-05-29T05:10:09.879Z
-GTAA_BASELINE,sample-batch,1,sample-run-1,playwright,responsive,responsive,Customize Pizza,Customize a pizza,FAIL,UI_ACTION_FAILURE,1920,2026-01-02T00:00:00.000Z,2026-05-29T05:10:09.879Z
-GTAA_BASELINE,sample-batch,1,sample-run-1,playwright,android,android,Place Delivery Order,Place a delivery order,PASS,,2675,2026-01-02T00:00:00.000Z,2026-05-29T05:10:09.879Z
+GTAA_BASELINE,sample-batch,0,sample-run-0,playwright,desktop,desktop,Browse Catalog,View the pizza catalog,PASS,,1200,2026-01-01T00:00:00.000Z,2026-05-29T06:20:18.888Z
+GTAA_BASELINE,sample-batch,0,sample-run-0,playwright,responsive,responsive,Customize Pizza,Customize a pizza,PASS,,1800,2026-01-01T00:00:00.000Z,2026-05-29T06:20:18.888Z
+GTAA_BASELINE,sample-batch,0,sample-run-0,playwright,android,android,Place Delivery Order,Place a delivery order,PASS,,2600,2026-01-01T00:00:00.000Z,2026-05-29T06:20:18.888Z
+GTAA_BASELINE,sample-batch,1,sample-run-1,playwright,desktop,desktop,Browse Catalog,View the pizza catalog,PASS,,1250,2026-01-02T00:00:00.000Z,2026-05-29T06:20:18.888Z
+GTAA_BASELINE,sample-batch,1,sample-run-1,playwright,responsive,responsive,Customize Pizza,Customize a pizza,FAIL,UI_ACTION_FAILURE,1920,2026-01-02T00:00:00.000Z,2026-05-29T06:20:18.888Z
+GTAA_BASELINE,sample-batch,1,sample-run-1,playwright,android,android,Place Delivery Order,Place a delivery order,PASS,,2675,2026-01-02T00:00:00.000Z,2026-05-29T06:20:18.888Z

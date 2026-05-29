@@ -112,7 +112,7 @@ jobs:
 
       - name: Collect + normalize metrics
         if: always()
-        run: pnpm metrics:all || true
+        run: pnpm metrics:all
 
       - name: Upload metrics artifact
         if: always()
@@ -172,7 +172,7 @@ jobs:
 
       - name: Collect + normalize metrics
         if: always()
-        run: pnpm metrics:all || true
+        run: pnpm metrics:all
 
       - name: Upload metrics artifact
         if: always()
@@ -251,7 +251,7 @@ jobs:
 
       - name: Collect + normalize metrics
         if: always()
-        run: pnpm metrics:all || true
+        run: pnpm metrics:all
 
       - name: Upload metrics artifact
         if: always()
@@ -292,7 +292,7 @@ jobs:
 
       - name: Collect + normalize metrics
         if: always()
-        run: pnpm metrics:all || true
+        run: pnpm metrics:all
 
       - name: Upload metrics artifact
         if: always()
@@ -330,7 +330,7 @@ jobs:
 
       - name: Collect + normalize metrics
         if: always()
-        run: pnpm metrics:all || true
+        run: pnpm metrics:all
 
       - name: Upload metrics artifact
         if: always()
@@ -375,7 +375,7 @@ jobs:
 
       - name: Collect + normalize metrics
         if: always()
-        run: pnpm metrics:all || true
+        run: pnpm metrics:all
 
       - name: Upload metrics artifact
         if: always()
@@ -437,11 +437,11 @@ jobs:
 
       - name: Aggregate metrics
         if: always()
-        run: pnpm metrics:all || true
+        run: pnpm metrics:all
 
       - name: Compute quality-attribute summary
         if: always()
-        run: pnpm metrics:quality:all || true
+        run: pnpm metrics:quality:all
 
       - name: Upload consolidated artifact
         if: always()

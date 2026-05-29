@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://tom-architecture/schemas/run-manifest.schema.json",
+  "$id": "https://gtaa-baseline/schemas/run-manifest.schema.json",
   "title": "RunManifest",
   "type": "object",
   "additionalProperties": false,

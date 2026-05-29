@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://tom-architecture/schemas/api-contract-event.schema.json",
+  "$id": "https://gtaa-baseline/schemas/api-contract-event.schema.json",
   "title": "ApiContractTelemetryEvent",
   "type": "object",
   "additionalProperties": true,

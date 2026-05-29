@@ -1,0 +1,9 @@
+architecture_type,repository_name,experiment_batch_id,run_index,workflow_run_id,workflow_attempt,tool_name,platform,viewport,metric_category,metric_name,metric_value,metric_unit,source_file,generated_at
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,maintainability,duplicated_loc,1216,count,src+scripts TS; normalized-line proxy,2026-05-29T06:20:22.003Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,maintainability,duplicated_code_percentage,18.57,percent,src+scripts TS; normalized-line proxy (dup_loc/counted_lines),2026-05-29T06:20:22.003Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,maintainability,files_touched_per_change,NOT_AVAILABLE,count,not meaningful with 1 commit(s); needs >=2 commits,2026-05-29T06:20:22.003Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,maintainability,average_file_size_loc,130.97,loc,src+scripts TS over 89 files,2026-05-29T06:20:22.003Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,maintainability,max_file_size_loc,434,loc,src+scripts TS over 89 files,2026-05-29T06:20:22.003Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,maintainability,cyclomatic_complexity_if_available,NOT_AVAILABLE,count,no static-analysis tool available in baseline,2026-05-29T06:20:22.003Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,maintainability,failure_bucket_coverage_percentage,7.14,percent,1/14 buckets referenced (failure_buckets.csv + tool-events),2026-05-29T06:20:22.003Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,maintainability,telemetry_completeness_percentage,100,percent,6/6 records have all required fields,2026-05-29T06:20:22.003Z

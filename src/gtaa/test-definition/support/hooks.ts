@@ -89,7 +89,7 @@ After(async function (this: GtaaWorld, scenario: ITestCaseHookParameter) {
   await this.disposeDriver().catch(() => undefined);
 });
 
-function mapStatus(status?: Status): ExecutionStatus {
+function mapStatus(status?: (typeof Status)[keyof typeof Status]): ExecutionStatus {
   switch (status) {
     case Status.PASSED:
       return 'PASS';

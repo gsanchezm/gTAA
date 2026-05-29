@@ -3,8 +3,8 @@
  *
  * Use cases (Test Definition) depend ONLY on this interface. Concrete executors
  * in the Test Execution layer (PlaywrightWebExecutor, AppiumAndroidExecutor,
- * AppiumIosExecutor) implement it. There is no microkernel, proxy, or intent
- * routing between them — the use case holds a UiDriver and calls it directly.
+ * AppiumIosExecutor) implement it. There is no indirection layer between them —
+ * the use case holds a UiDriver and calls it directly.
  *
  * Locator arguments are logical refs ("<domain>.<key>"); the executor resolves
  * them through the locator adaptation layer for the active platform.

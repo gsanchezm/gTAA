@@ -1,0 +1,12 @@
+architecture_type,repository_name,experiment_batch_id,run_index,workflow_run_id,workflow_attempt,tool_name,platform,viewport,metric_category,metric_name,metric_value,metric_unit,source_file,generated_at
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,observability,telemetry_event_count,6,count,tool-events/*.jsonl,2026-05-29T06:20:26.495Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,observability,telemetry_completeness_percentage,100,percent,tool-events/*.jsonl,2026-05-29T06:20:26.495Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,observability,missing_run_manifest_count,0,count,tool-events/*.jsonl + run-manifest/*.json,2026-05-29T06:20:26.495Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,observability,missing_scenario_duration_count,0,count,tool-events/*.jsonl,2026-05-29T06:20:26.495Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,observability,missing_failure_bucket_count,0,count,tool-events/*.jsonl,2026-05-29T06:20:26.495Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,observability,classified_failure_percentage,100,percent,tool-events/*.jsonl,2026-05-29T06:20:26.495Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,observability,unclassified_failure_percentage,0,percent,tool-events/*.jsonl,2026-05-29T06:20:26.495Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,observability,raw_metrics_uploaded,1,boolean,metrics/raw (CI: uploaded artifacts),2026-05-29T06:20:26.495Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,observability,processed_metrics_uploaded,1,boolean,metrics/processed (CI: uploaded artifacts),2026-05-29T06:20:26.495Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,observability,logs_uploaded,0,boolean,logs/ (CI: uploaded artifacts),2026-05-29T06:20:26.495Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,observability,artifacts_uploaded,0,boolean,results/ | visual-results/ | target/gatling (CI: uploaded artifacts),2026-05-29T06:20:26.495Z

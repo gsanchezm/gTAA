@@ -1,7 +1,15 @@
+# Native/driver dependency build-script approvals (pnpm 11 `allowBuilds`).
+#
+# All set to `false`: their build scripts are intentionally NOT run. The metrics
+# pipeline (tsx/esbuild) and the TypeScript build work from prebuilt binaries
+# resolved via optional dependencies, and visual testing uses pixelmatch+pngjs
+# (pure JS), so `pnpm install` stays deterministic across local and CI without a
+# native toolchain. Set an entry to `true` (or run `pnpm approve-builds`) only
+# when exercising real on-device mobile / on-browser execution.
 allowBuilds:
-  appium: set this to true or false
-  appium-ios-tuntap: set this to true or false
-  edgedriver: set this to true or false
-  esbuild: set this to true or false
-  geckodriver: set this to true or false
-  sharp: set this to true or false
+  appium: false
+  appium-ios-tuntap: false
+  edgedriver: false
+  esbuild: false
+  geckodriver: false
+  sharp: false

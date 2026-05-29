@@ -1,7 +1,7 @@
 // Cucumber configuration for the gTAA baseline.
 // Layered flow: feature -> step-definition -> use case (Test Definition)
 //   -> executor (Test Execution) -> driver/client (Test Adaptation) -> telemetry (Test Reporting).
-// No microkernel, no proxy, no plugin registry, no intent routing.
+// Plain layered execution: no central router, no dynamic tool loading, no action indirection.
 module.exports = {
   default: {
     paths: ["src/gtaa/test-generation/features/**/*.feature"],

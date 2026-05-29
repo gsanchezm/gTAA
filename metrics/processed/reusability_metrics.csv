@@ -1,0 +1,9 @@
+architecture_type,repository_name,experiment_batch_id,run_index,workflow_run_id,workflow_attempt,tool_name,platform,viewport,metric_category,metric_name,metric_value,metric_unit,source_file,generated_at
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,reusability,scenario_reuse_ratio,0.9545,ratio,platform_coverage_matrix.csv,2026-05-29T06:20:24.325Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,reusability,feature_to_tool_coverage,0.7857,ratio,"platform_coverage_matrix.csv (executed=distinct (featureFile,toolColumn) covered pairs; expected=#featureFiles*7)",2026-05-29T06:20:24.325Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,reusability,shared_step_reuse_count,14,count,src/gtaa/test-generation/features/*.feature (distinct normalized steps in >1 scenario),2026-05-29T06:20:24.325Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,reusability,shared_contract_reuse_count,20,count,"src/gtaa/test-generation/contracts/{locators,api,visual}/*.json (total contract files, each shared across platforms)",2026-05-29T06:20:24.325Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,reusability,locator_contract_reuse_count,7,count,src/gtaa/test-generation/contracts/locators/*.json,2026-05-29T06:20:24.325Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,reusability,api_contract_reuse_count,6,count,src/gtaa/test-generation/contracts/api/*.json,2026-05-29T06:20:24.325Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,reusability,visual_contract_reuse_count,7,count,src/gtaa/test-generation/contracts/visual/*.json,2026-05-29T06:20:24.325Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,reusability,test_data_reuse_count,2,count,src/gtaa/test-generation/test-data/* (top-level data files),2026-05-29T06:20:24.325Z

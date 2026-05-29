@@ -1,2 +1,2 @@
 run_id,simulation_name,request_count,success_count,failure_count,mean_response_time_ms,p95_response_time_ms,max_response_time_ms,threshold_status,duration_ms,failure_bucket,architecture_type,repository_name,experiment_batch_id,run_index,workflow_run_id,workflow_attempt,tool_name,platform,viewport,generated_at
-sample-run-0,OrderLoadSimulation,1000,994,6,142,410,980,PASS,60000,,GTAA_BASELINE,gTAA,sample-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,gatling,ALL,ALL,2026-05-29T05:10:08.176Z
+sample-run-0,OrderLoadSimulation,1000,994,6,142,410,980,PASS,60000,,GTAA_BASELINE,gTAA,sample-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,gatling,ALL,ALL,2026-05-29T06:20:17.079Z

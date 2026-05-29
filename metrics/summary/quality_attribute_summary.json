@@ -1,0 +1,804 @@
+{
+  "architecture_type": "GTAA_BASELINE",
+  "repository_name": "gTAA",
+  "experiment_batch_id": "local-batch",
+  "run_index": "0",
+  "generated_at": "2026-05-29T06:20:28.689Z",
+  "total_quality_records": 103,
+  "attributes": [
+    {
+      "attribute": "Maintainability",
+      "metric_category": "maintainability",
+      "source_file": "maintainability_metrics.csv",
+      "record_count": 8,
+      "metrics": [
+        {
+          "metric_name": "duplicated_loc",
+          "metric_value": "1216",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "duplicated_code_percentage",
+          "metric_value": "18.57",
+          "metric_unit": "percent",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "files_touched_per_change",
+          "metric_value": "NOT_AVAILABLE",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "average_file_size_loc",
+          "metric_value": "130.97",
+          "metric_unit": "loc",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "max_file_size_loc",
+          "metric_value": "434",
+          "metric_unit": "loc",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "cyclomatic_complexity_if_available",
+          "metric_value": "NOT_AVAILABLE",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "failure_bucket_coverage_percentage",
+          "metric_value": "7.14",
+          "metric_unit": "percent",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "telemetry_completeness_percentage",
+          "metric_value": "100",
+          "metric_unit": "percent",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        }
+      ]
+    },
+    {
+      "attribute": "Modifiability",
+      "metric_category": "modifiability",
+      "source_file": "modifiability_metrics.csv",
+      "record_count": 9,
+      "metrics": [
+        {
+          "metric_name": "core_files_modified",
+          "metric_value": "NOT_AVAILABLE",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "execution_layer_files_modified",
+          "metric_value": "NOT_AVAILABLE",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "adapter_files_modified",
+          "metric_value": "NOT_AVAILABLE",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "reporting_files_modified",
+          "metric_value": "NOT_AVAILABLE",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "configuration_files_modified",
+          "metric_value": "NOT_AVAILABLE",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "loc_added",
+          "metric_value": "NOT_AVAILABLE",
+          "metric_unit": "loc",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "loc_deleted",
+          "metric_value": "NOT_AVAILABLE",
+          "metric_unit": "loc",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "loc_modified",
+          "metric_value": "NOT_AVAILABLE",
+          "metric_unit": "loc",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "change_impact_score",
+          "metric_value": "NOT_AVAILABLE",
+          "metric_unit": "score",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        }
+      ]
+    },
+    {
+      "attribute": "Extensibility",
+      "metric_category": "extensibility",
+      "source_file": "extensibility_metrics.csv",
+      "record_count": 7,
+      "metrics": [
+        {
+          "metric_name": "new_tool_files_added",
+          "metric_value": "NOT_AVAILABLE",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "new_tool_files_modified",
+          "metric_value": "NOT_AVAILABLE",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "new_tool_loc_added",
+          "metric_value": "NOT_AVAILABLE",
+          "metric_unit": "loc",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "existing_core_files_changed_for_new_tool",
+          "metric_value": "NOT_AVAILABLE",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "new_action_or_adapter_count",
+          "metric_value": "NOT_AVAILABLE",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "registration_changes_count",
+          "metric_value": "NOT_AVAILABLE",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "integration_effort_proxy_score",
+          "metric_value": "NOT_AVAILABLE",
+          "metric_unit": "score",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        }
+      ]
+    },
+    {
+      "attribute": "Reusability",
+      "metric_category": "reusability",
+      "source_file": "reusability_metrics.csv",
+      "record_count": 8,
+      "metrics": [
+        {
+          "metric_name": "scenario_reuse_ratio",
+          "metric_value": "0.9545",
+          "metric_unit": "ratio",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "feature_to_tool_coverage",
+          "metric_value": "0.7857",
+          "metric_unit": "ratio",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "shared_step_reuse_count",
+          "metric_value": "14",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "shared_contract_reuse_count",
+          "metric_value": "20",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "locator_contract_reuse_count",
+          "metric_value": "7",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "api_contract_reuse_count",
+          "metric_value": "6",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "visual_contract_reuse_count",
+          "metric_value": "7",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "test_data_reuse_count",
+          "metric_value": "2",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        }
+      ]
+    },
+    {
+      "attribute": "Reliability",
+      "metric_category": "reliability",
+      "source_file": "reliability_metrics.csv",
+      "record_count": 22,
+      "metrics": [
+        {
+          "metric_name": "pass_rate",
+          "metric_value": "0.8333",
+          "metric_unit": "ratio",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "fail_rate",
+          "metric_value": "0.1667",
+          "metric_unit": "ratio",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "flaky_scenario_count",
+          "metric_value": "1",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "pass_to_fail_probability",
+          "metric_value": "0.3333",
+          "metric_unit": "ratio",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "fail_to_pass_probability",
+          "metric_value": "NOT_AVAILABLE",
+          "metric_unit": "ratio",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "retry_count",
+          "metric_value": "NOT_AVAILABLE",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "failure_bucket_distribution:API_CONTRACT_FAILURE",
+          "metric_value": "0",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "failure_bucket_distribution:API_RESPONSE_FAILURE",
+          "metric_value": "0",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "failure_bucket_distribution:ASSERTION_FAILURE",
+          "metric_value": "0",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "failure_bucket_distribution:DATA_SETUP_FAILURE",
+          "metric_value": "0",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "failure_bucket_distribution:INFRASTRUCTURE_FAILURE",
+          "metric_value": "0",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "failure_bucket_distribution:LOCATOR_RESOLUTION_FAILURE",
+          "metric_value": "0",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "failure_bucket_distribution:MOBILE_SESSION_FAILURE",
+          "metric_value": "0",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "failure_bucket_distribution:PERFORMANCE_THRESHOLD_FAILURE",
+          "metric_value": "0",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "failure_bucket_distribution:TIMEOUT_FAILURE",
+          "metric_value": "0",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "failure_bucket_distribution:UI_ACTION_FAILURE",
+          "metric_value": "1",
+          "metric_unit": "count",
+          "tool_name": "playwright",
+          "platform": "responsive"
+        },
+        {
+          "metric_name": "failure_bucket_distribution:UNKNOWN_FAILURE",
+          "metric_value": "0",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "failure_bucket_distribution:VISUAL_BASELINE_MISSING",
+          "metric_value": "0",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "failure_bucket_distribution:VISUAL_DIFF_FAILURE",
+          "metric_value": "0",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "failure_bucket_distribution:WEB_SESSION_FAILURE",
+          "metric_value": "0",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "infrastructure_failure_rate",
+          "metric_value": "0",
+          "metric_unit": "ratio",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "tool_failure_rate",
+          "metric_value": "0.1667",
+          "metric_unit": "ratio",
+          "tool_name": "playwright",
+          "platform": "ALL"
+        }
+      ]
+    },
+    {
+      "attribute": "Performance Efficiency",
+      "metric_category": "performance_efficiency",
+      "source_file": "performance_efficiency_metrics.csv",
+      "record_count": 22,
+      "metrics": [
+        {
+          "metric_name": "workflow_duration_ms",
+          "metric_value": "NOT_AVAILABLE",
+          "metric_unit": "ms",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "job_duration_ms",
+          "metric_value": "NOT_AVAILABLE",
+          "metric_unit": "ms",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "scenario_duration_ms",
+          "metric_value": "1907.5",
+          "metric_unit": "ms",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "step_duration_ms",
+          "metric_value": "NOT_AVAILABLE",
+          "metric_unit": "ms",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "action_duration_ms",
+          "metric_value": "NOT_AVAILABLE",
+          "metric_unit": "ms",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "p50_scenario_duration_ms",
+          "metric_value": "1860",
+          "metric_unit": "ms",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "p95_scenario_duration_ms",
+          "metric_value": "2656.25",
+          "metric_unit": "ms",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "p99_scenario_duration_ms",
+          "metric_value": "2671.25",
+          "metric_unit": "ms",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "tool_startup_duration_ms",
+          "metric_value": "NOT_AVAILABLE",
+          "metric_unit": "ms",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "telemetry_processing_duration_ms",
+          "metric_value": "NOT_AVAILABLE",
+          "metric_unit": "ms",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "proxy_overhead_ms",
+          "metric_value": "NOT_AVAILABLE",
+          "metric_unit": "ms",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "grpc_or_ipc_latency_ms",
+          "metric_value": "NOT_AVAILABLE",
+          "metric_unit": "ms",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "plugin_action_duration_ms",
+          "metric_value": "NOT_AVAILABLE",
+          "metric_unit": "ms",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "p50_scenario_duration_ms",
+          "metric_value": "2637.5",
+          "metric_unit": "ms",
+          "tool_name": "playwright",
+          "platform": "android"
+        },
+        {
+          "metric_name": "p95_scenario_duration_ms",
+          "metric_value": "2671.25",
+          "metric_unit": "ms",
+          "tool_name": "playwright",
+          "platform": "android"
+        },
+        {
+          "metric_name": "p99_scenario_duration_ms",
+          "metric_value": "2674.25",
+          "metric_unit": "ms",
+          "tool_name": "playwright",
+          "platform": "android"
+        },
+        {
+          "metric_name": "p50_scenario_duration_ms",
+          "metric_value": "1225",
+          "metric_unit": "ms",
+          "tool_name": "playwright",
+          "platform": "desktop"
+        },
+        {
+          "metric_name": "p95_scenario_duration_ms",
+          "metric_value": "1247.5",
+          "metric_unit": "ms",
+          "tool_name": "playwright",
+          "platform": "desktop"
+        },
+        {
+          "metric_name": "p99_scenario_duration_ms",
+          "metric_value": "1249.5",
+          "metric_unit": "ms",
+          "tool_name": "playwright",
+          "platform": "desktop"
+        },
+        {
+          "metric_name": "p50_scenario_duration_ms",
+          "metric_value": "1860",
+          "metric_unit": "ms",
+          "tool_name": "playwright",
+          "platform": "responsive"
+        },
+        {
+          "metric_name": "p95_scenario_duration_ms",
+          "metric_value": "1914",
+          "metric_unit": "ms",
+          "tool_name": "playwright",
+          "platform": "responsive"
+        },
+        {
+          "metric_name": "p99_scenario_duration_ms",
+          "metric_value": "1918.8",
+          "metric_unit": "ms",
+          "tool_name": "playwright",
+          "platform": "responsive"
+        }
+      ]
+    },
+    {
+      "attribute": "Observability",
+      "metric_category": "observability",
+      "source_file": "observability_metrics.csv",
+      "record_count": 11,
+      "metrics": [
+        {
+          "metric_name": "telemetry_event_count",
+          "metric_value": "6",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "telemetry_completeness_percentage",
+          "metric_value": "100",
+          "metric_unit": "percent",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "missing_run_manifest_count",
+          "metric_value": "0",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "missing_scenario_duration_count",
+          "metric_value": "0",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "missing_failure_bucket_count",
+          "metric_value": "0",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "classified_failure_percentage",
+          "metric_value": "100",
+          "metric_unit": "percent",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "unclassified_failure_percentage",
+          "metric_value": "0",
+          "metric_unit": "percent",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "raw_metrics_uploaded",
+          "metric_value": "1",
+          "metric_unit": "boolean",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "processed_metrics_uploaded",
+          "metric_value": "1",
+          "metric_unit": "boolean",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "logs_uploaded",
+          "metric_value": "0",
+          "metric_unit": "boolean",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "artifacts_uploaded",
+          "metric_value": "0",
+          "metric_unit": "boolean",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        }
+      ]
+    },
+    {
+      "attribute": "Portability",
+      "metric_category": "portability",
+      "source_file": "portability_metrics.csv",
+      "record_count": 8,
+      "metrics": [
+        {
+          "metric_name": "environment_specific_config_count",
+          "metric_value": "31",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "failed_tool_count",
+          "metric_value": "0",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "platform_coverage_percentage",
+          "metric_value": "64.94",
+          "metric_unit": "percent",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "platform_specific_code_count",
+          "metric_value": "3",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "platform_specific_locator_count",
+          "metric_value": "89",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "successful_platform_matrix_percentage",
+          "metric_value": "NOT_AVAILABLE",
+          "metric_unit": "percent",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "successful_tool_count",
+          "metric_value": "3",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "supported_tool_count",
+          "metric_value": "6",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        }
+      ]
+    },
+    {
+      "attribute": "Interoperability",
+      "metric_category": "interoperability",
+      "source_file": "interoperability_metrics.csv",
+      "record_count": 8,
+      "metrics": [
+        {
+          "metric_name": "api_oracle_available",
+          "metric_value": "1",
+          "metric_unit": "boolean",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "oracle_composition_count",
+          "metric_value": "11",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "oracle_count",
+          "metric_value": "6",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "performance_oracle_available",
+          "metric_value": "1",
+          "metric_unit": "boolean",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "successful_oracle_composition_count",
+          "metric_value": "3",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "tool_count",
+          "metric_value": "6",
+          "metric_unit": "count",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "ui_oracle_available",
+          "metric_value": "1",
+          "metric_unit": "boolean",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        },
+        {
+          "metric_name": "visual_oracle_available",
+          "metric_value": "1",
+          "metric_unit": "boolean",
+          "tool_name": "ALL",
+          "platform": "ALL"
+        }
+      ]
+    }
+  ],
+  "missing_attribute_files": []
+}

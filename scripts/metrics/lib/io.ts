@@ -49,6 +49,87 @@ export function writeCsv(
   writeFileSync(filePath, rows.length ? `${header}\n${body}\n` : `${header}\n`, 'utf8');
 }
 
+/**
+ * Parse a CSV file into an array of row objects keyed by the header row.
+ * RFC-4180 aware: handles quoted fields containing commas, newlines, and
+ * escaped (doubled) quotes. Returns [] when the file is missing or has only a
+ * header — quality scripts must degrade to NOT_AVAILABLE rather than crash.
+ */
+export function readCsv(filePath: string): Array<Record<string, string>> {
+  if (!existsSync(filePath)) return [];
+  const text = readFileSync(filePath, 'utf8');
+  const records = parseCsvText(text);
+  if (records.length === 0) return [];
+  const [header, ...dataRows] = records;
+  return dataRows.map((cells) => {
+    const row: Record<string, string> = {};
+    header.forEach((col, i) => {
+      row[col] = cells[i] ?? '';
+    });
+    return row;
+  });
+}
+
+/** Tokenize raw CSV text into rows of string cells (RFC-4180). */
+function parseCsvText(text: string): string[][] {
+  const rows: string[][] = [];
+  let field = '';
+  let row: string[] = [];
+  let inQuotes = false;
+  let i = 0;
+  const pushField = () => {
+    row.push(field);
+    field = '';
+  };
+  const pushRow = () => {
+    pushField();
+    rows.push(row);
+    row = [];
+  };
+  while (i < text.length) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i + 1] === '"') {
+          field += '"';
+          i += 2;
+          continue;
+        }
+        inQuotes = false;
+        i += 1;
+        continue;
+      }
+      field += c;
+      i += 1;
+      continue;
+    }
+    if (c === '"') {
+      inQuotes = true;
+      i += 1;
+      continue;
+    }
+    if (c === ',') {
+      pushField();
+      i += 1;
+      continue;
+    }
+    if (c === '\r') {
+      i += 1;
+      continue;
+    }
+    if (c === '\n') {
+      pushRow();
+      i += 1;
+      continue;
+    }
+    field += c;
+    i += 1;
+  }
+  // Flush trailing field/row if the file does not end with a newline.
+  if (field.length > 0 || row.length > 0) pushRow();
+  return rows.filter((r) => !(r.length === 1 && r[0] === ''));
+}
+
 export function appendLine(filePath: string, line: string): void {
   ensureDir(filePath);
   appendFileSync(filePath, `${line}\n`, 'utf8');

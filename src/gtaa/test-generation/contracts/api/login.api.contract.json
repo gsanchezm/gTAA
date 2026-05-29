@@ -5,7 +5,7 @@
   "endpoints": [
     {
       "id": "login.authenticate",
-      "description": "Exchange credentials for an access token. Used by DAOs to seed $S_0$ state and by the gatling resonance suite for load tests.",
+      "description": "Exchange credentials for an access token. Used to seed authenticated session state and by the Gatling load-test suite.",
       "method": "POST",
       "path": "/api/auth/login",
       "headersTemplate": {

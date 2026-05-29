@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://tom-architecture/schemas/visual-contract-event.schema.json",
+  "$id": "https://gtaa-baseline/schemas/visual-contract-event.schema.json",
   "title": "VisualContractTelemetryEvent",
   "type": "object",
   "additionalProperties": true,

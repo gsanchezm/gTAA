@@ -1,0 +1,8 @@
+architecture_type,repository_name,experiment_batch_id,run_index,workflow_run_id,workflow_attempt,tool_name,platform,viewport,metric_category,metric_name,metric_value,metric_unit,source_file,generated_at
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,extensibility,new_tool_files_added,NOT_AVAILABLE,count,no tool-integration manifest present,2026-05-29T06:20:23.673Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,extensibility,new_tool_files_modified,NOT_AVAILABLE,count,no tool-integration manifest present,2026-05-29T06:20:23.673Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,extensibility,new_tool_loc_added,NOT_AVAILABLE,loc,no tool-integration manifest present,2026-05-29T06:20:23.673Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,extensibility,existing_core_files_changed_for_new_tool,NOT_AVAILABLE,count,no tool-integration manifest present,2026-05-29T06:20:23.673Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,extensibility,new_action_or_adapter_count,NOT_AVAILABLE,count,no tool-integration manifest present,2026-05-29T06:20:23.673Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,extensibility,registration_changes_count,NOT_AVAILABLE,count,no tool-integration manifest present,2026-05-29T06:20:23.673Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,extensibility,integration_effort_proxy_score,NOT_AVAILABLE,score,no tool-integration manifest present,2026-05-29T06:20:23.673Z

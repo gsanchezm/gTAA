@@ -1,0 +1,23 @@
+architecture_type,repository_name,experiment_batch_id,run_index,workflow_run_id,workflow_attempt,tool_name,platform,viewport,metric_category,metric_name,metric_value,metric_unit,source_file,generated_at
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,performance_efficiency,workflow_duration_ms,NOT_AVAILABLE,ms,run-manifest/*.json (not recorded outside CI),2026-05-29T06:20:25.751Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,performance_efficiency,job_duration_ms,NOT_AVAILABLE,ms,run-manifest/*.json (not recorded outside CI),2026-05-29T06:20:25.751Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,performance_efficiency,scenario_duration_ms,1907.5,ms,scenario_outcome_history.csv,2026-05-29T06:20:25.751Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,performance_efficiency,step_duration_ms,NOT_AVAILABLE,ms,tool-events/*.jsonl (no step-level durations),2026-05-29T06:20:25.751Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,performance_efficiency,action_duration_ms,NOT_AVAILABLE,ms,tool-events/*.jsonl (no action-level data),2026-05-29T06:20:25.751Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,performance_efficiency,p50_scenario_duration_ms,1860,ms,scenario_outcome_history.csv,2026-05-29T06:20:25.751Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,performance_efficiency,p95_scenario_duration_ms,2656.25,ms,scenario_outcome_history.csv,2026-05-29T06:20:25.751Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,performance_efficiency,p99_scenario_duration_ms,2671.25,ms,scenario_outcome_history.csv,2026-05-29T06:20:25.751Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,performance_efficiency,tool_startup_duration_ms,NOT_AVAILABLE,ms,not measured,2026-05-29T06:20:25.751Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,performance_efficiency,telemetry_processing_duration_ms,NOT_AVAILABLE,ms,not measured,2026-05-29T06:20:25.751Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,performance_efficiency,proxy_overhead_ms,NOT_AVAILABLE,ms,not applicable - layered architecture has no such overhead,2026-05-29T06:20:25.751Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,performance_efficiency,grpc_or_ipc_latency_ms,NOT_AVAILABLE,ms,not applicable - layered architecture has no such overhead,2026-05-29T06:20:25.751Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,performance_efficiency,plugin_action_duration_ms,NOT_AVAILABLE,ms,not applicable - layered architecture has no such overhead,2026-05-29T06:20:25.751Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,playwright,android,ALL,performance_efficiency,p50_scenario_duration_ms,2637.5,ms,platform_durations.csv,2026-05-29T06:20:25.751Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,playwright,android,ALL,performance_efficiency,p95_scenario_duration_ms,2671.25,ms,platform_durations.csv,2026-05-29T06:20:25.751Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,playwright,android,ALL,performance_efficiency,p99_scenario_duration_ms,2674.25,ms,platform_durations.csv,2026-05-29T06:20:25.751Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,playwright,desktop,ALL,performance_efficiency,p50_scenario_duration_ms,1225,ms,platform_durations.csv,2026-05-29T06:20:25.751Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,playwright,desktop,ALL,performance_efficiency,p95_scenario_duration_ms,1247.5,ms,platform_durations.csv,2026-05-29T06:20:25.751Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,playwright,desktop,ALL,performance_efficiency,p99_scenario_duration_ms,1249.5,ms,platform_durations.csv,2026-05-29T06:20:25.751Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,playwright,responsive,ALL,performance_efficiency,p50_scenario_duration_ms,1860,ms,platform_durations.csv,2026-05-29T06:20:25.751Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,playwright,responsive,ALL,performance_efficiency,p95_scenario_duration_ms,1914,ms,platform_durations.csv,2026-05-29T06:20:25.751Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,playwright,responsive,ALL,performance_efficiency,p99_scenario_duration_ms,1918.8,ms,platform_durations.csv,2026-05-29T06:20:25.751Z

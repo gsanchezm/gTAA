@@ -1,0 +1,23 @@
+architecture_type,repository_name,experiment_batch_id,run_index,workflow_run_id,workflow_attempt,tool_name,platform,viewport,metric_category,metric_name,metric_value,metric_unit,source_file,generated_at
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,reliability,pass_rate,0.8333,ratio,scenario_outcome_history.csv,2026-05-29T06:20:25.075Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,reliability,fail_rate,0.1667,ratio,scenario_outcome_history.csv,2026-05-29T06:20:25.075Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,reliability,flaky_scenario_count,1,count,scenario_outcome_history.csv,2026-05-29T06:20:25.075Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,reliability,pass_to_fail_probability,0.3333,ratio,scenario_outcome_history.csv,2026-05-29T06:20:25.075Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,reliability,fail_to_pass_probability,NOT_AVAILABLE,ratio,scenario_outcome_history.csv (no FAIL-origin transitions),2026-05-29T06:20:25.075Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,reliability,retry_count,NOT_AVAILABLE,count,scenario_outcome_history.csv (no retry data in inputs),2026-05-29T06:20:25.075Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,reliability,failure_bucket_distribution:API_CONTRACT_FAILURE,0,count,failure_buckets.csv,2026-05-29T06:20:25.075Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,reliability,failure_bucket_distribution:API_RESPONSE_FAILURE,0,count,failure_buckets.csv,2026-05-29T06:20:25.075Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,reliability,failure_bucket_distribution:ASSERTION_FAILURE,0,count,failure_buckets.csv,2026-05-29T06:20:25.075Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,reliability,failure_bucket_distribution:DATA_SETUP_FAILURE,0,count,failure_buckets.csv,2026-05-29T06:20:25.075Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,reliability,failure_bucket_distribution:INFRASTRUCTURE_FAILURE,0,count,failure_buckets.csv,2026-05-29T06:20:25.075Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,reliability,failure_bucket_distribution:LOCATOR_RESOLUTION_FAILURE,0,count,failure_buckets.csv,2026-05-29T06:20:25.075Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,reliability,failure_bucket_distribution:MOBILE_SESSION_FAILURE,0,count,failure_buckets.csv,2026-05-29T06:20:25.075Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,reliability,failure_bucket_distribution:PERFORMANCE_THRESHOLD_FAILURE,0,count,failure_buckets.csv,2026-05-29T06:20:25.075Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,reliability,failure_bucket_distribution:TIMEOUT_FAILURE,0,count,failure_buckets.csv,2026-05-29T06:20:25.075Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,playwright,responsive,ALL,reliability,failure_bucket_distribution:UI_ACTION_FAILURE,1,count,failure_buckets.csv,2026-05-29T06:20:25.075Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,reliability,failure_bucket_distribution:UNKNOWN_FAILURE,0,count,failure_buckets.csv,2026-05-29T06:20:25.075Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,reliability,failure_bucket_distribution:VISUAL_BASELINE_MISSING,0,count,failure_buckets.csv,2026-05-29T06:20:25.075Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,reliability,failure_bucket_distribution:VISUAL_DIFF_FAILURE,0,count,failure_buckets.csv,2026-05-29T06:20:25.075Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,reliability,failure_bucket_distribution:WEB_SESSION_FAILURE,0,count,failure_buckets.csv,2026-05-29T06:20:25.075Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,ALL,ALL,ALL,reliability,infrastructure_failure_rate,0,ratio,failure_buckets.csv,2026-05-29T06:20:25.075Z
+GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,playwright,ALL,ALL,reliability,tool_failure_rate,0.1667,ratio,scenario_outcome_history.csv,2026-05-29T06:20:25.075Z

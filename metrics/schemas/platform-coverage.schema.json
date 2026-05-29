@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://tom-architecture/schemas/platform-coverage.schema.json",
+  "$id": "https://gtaa-baseline/schemas/platform-coverage.schema.json",
   "title": "PlatformCoverageEntry",
   "type": "object",
   "additionalProperties": false,
