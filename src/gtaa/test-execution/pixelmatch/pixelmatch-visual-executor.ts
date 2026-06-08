@@ -147,10 +147,21 @@ export class PixelmatchVisualExecutor {
       //    support capture; surface that as a clear SKIP rather than crashing.
       let actualPng: Buffer;
       try {
-        actualPng =
-          strategy === 'region'
-            ? await driver.captureRegion(regionRefResolvable, { maskRefs: maskRefsResolvable })
-            : await driver.capturePage({ maskRefs: maskRefsResolvable });
+        if (strategy === 'region') {
+          try {
+            actualPng = await driver.captureRegion(regionRefResolvable, {
+              maskRefs: maskRefsResolvable,
+            });
+          } catch {
+            // The region is declared in the contract but absent on screen at
+            // this step (the UI moved on — e.g. the builder closed, or the flow
+            // navigated to order-success). Fall back to a full-page capture so
+            // the snapshot still records an actual instead of skipping.
+            actualPng = await driver.capturePage({ maskRefs: maskRefsResolvable });
+          }
+        } else {
+          actualPng = await driver.capturePage({ maskRefs: maskRefsResolvable });
+        }
       } catch (captureErr) {
         const isMobile = target.visualPlatform !== 'web';
         const result: VisualComparisonResult = {
