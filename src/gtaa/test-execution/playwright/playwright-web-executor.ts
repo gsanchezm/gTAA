@@ -12,7 +12,7 @@ import { chromium, Browser, BrowserContext, Page, Locator } from 'playwright';
 
 import type { CaptureOptions, UiDriver } from '../../test-adaptation/drivers/ui-driver';
 import { resolveLocator } from '../../test-adaptation/locators/locator-resolver';
-import { webConfig } from '../../configuration/environments/env';
+import { appConfig, webConfig } from '../../configuration/environments/env';
 import { webToolConfig } from '../../configuration/tools/playwright.config';
 import type { ExecutionContext } from '../../shared/types';
 import { ClassifiedError, FailureBucket } from '../../shared/failure-buckets';
@@ -44,6 +44,9 @@ export class PlaywrightWebExecutor implements UiDriver {
       });
       this.browserContext = await this.browser.newContext({
         viewport: this.viewportForPlatform(),
+        // Relative navigations (e.g. ui.navigate('/login')) resolve against the
+        // configured AUT origin; without a baseURL Playwright rejects them.
+        baseURL: appConfig().baseUrl,
       });
       this.currentPage = await this.browserContext.newPage();
     } catch (error) {
@@ -99,7 +102,10 @@ export class PlaywrightWebExecutor implements UiDriver {
 
   async click(ref: string): Promise<void> {
     const timeout = webConfig().timeoutMs;
-    const locator = this.locate(ref);
+    // A ref may resolve to a list-container selector matching many elements
+    // (e.g. category pills, pizza cards); act on the first match rather than
+    // tripping Playwright strict mode.
+    const locator = this.locate(ref).first();
     try {
       await locator.waitFor({ state: 'visible', timeout });
       await locator.click({ timeout });
@@ -110,7 +116,7 @@ export class PlaywrightWebExecutor implements UiDriver {
 
   async type(ref: string, text: string): Promise<void> {
     const timeout = webConfig().timeoutMs;
-    const locator = this.locate(ref);
+    const locator = this.locate(ref).first();
     try {
       await locator.waitFor({ state: 'visible', timeout });
       await locator.fill(text, { timeout });
@@ -123,15 +129,19 @@ export class PlaywrightWebExecutor implements UiDriver {
     const timeout = webConfig().timeoutMs;
     const locator = this.locate(ref);
     try {
-      await locator.waitFor({ state: 'visible', timeout });
-      return (await locator.textContent({ timeout })) ?? '';
+      await locator.first().waitFor({ state: 'visible', timeout });
+      // The ref may resolve to a list container matching many elements (e.g. a
+      // grid of cards); aggregate all matches so "is X visible among them"
+      // assertions scan the whole list instead of tripping strict mode.
+      const texts = await locator.allInnerTexts();
+      return texts.join(' ');
     } catch (error) {
       throw this.classify(error, FailureBucket.UI_ACTION_FAILURE, `Failed to read text of "${ref}"`);
     }
   }
 
   async isVisible(ref: string): Promise<boolean> {
-    const locator = this.locate(ref);
+    const locator = this.locate(ref).first();
     try {
       return await locator.isVisible();
     } catch (error) {
@@ -145,7 +155,7 @@ export class PlaywrightWebExecutor implements UiDriver {
 
   async waitForVisible(ref: string, timeoutMs?: number): Promise<void> {
     const timeout = timeoutMs ?? webConfig().timeoutMs;
-    const locator = this.locate(ref);
+    const locator = this.locate(ref).first();
     try {
       await locator.waitFor({ state: 'visible', timeout });
     } catch (error) {
@@ -169,24 +179,27 @@ export class PlaywrightWebExecutor implements UiDriver {
   async captureRegion(ref: string, options?: CaptureOptions): Promise<Buffer> {
     const timeout = webConfig().timeoutMs;
     const page = this.requirePage();
-    const locator = this.locate(ref);
+    const locator = this.locate(ref).first();
     const masks = this.resolveMasks(options);
     try {
       await locator.waitFor({ state: 'visible', timeout });
+      await this.stabilize();
 
       if (masks.length === 0) {
-        return await locator.screenshot({ type: 'png' });
+        return await locator.screenshot({ type: 'png', animations: 'disabled', caret: 'hide' });
       }
 
       const box = await locator.boundingBox();
       if (!box) {
         // Cannot clip without a bounding box; fall back to an unmasked element shot.
-        return await locator.screenshot({ type: 'png' });
+        return await locator.screenshot({ type: 'png', animations: 'disabled', caret: 'hide' });
       }
       return await page.screenshot({
         type: 'png',
         clip: { x: box.x, y: box.y, width: box.width, height: box.height },
         mask: masks,
+        animations: 'disabled',
+        caret: 'hide',
       });
     } catch (error) {
       throw this.classify(error, FailureBucket.UI_ACTION_FAILURE, `Failed to capture region "${ref}"`);
@@ -198,10 +211,33 @@ export class PlaywrightWebExecutor implements UiDriver {
     const page = this.requirePage();
     const masks = this.resolveMasks(options);
     try {
-      return await page.screenshot({ type: 'png', fullPage: true, mask: masks });
+      await this.stabilize();
+      return await page.screenshot({
+        type: 'png',
+        fullPage: true,
+        mask: masks,
+        animations: 'disabled',
+        caret: 'hide',
+      });
     } catch (error) {
       throw this.classify(error, FailureBucket.UI_ACTION_FAILURE, 'Failed to capture page');
     }
+  }
+
+  /**
+   * Settle the frame so a baseline and a later compare capture the SAME pixels:
+   * wait for the network to go idle (catches async writes like an in-flight
+   * save's PATCH + re-hydration, and lazy images) and for web fonts to swap in
+   * (FOUT/FOIT). Both are bounded and swallowed — a flaky settle must never fail
+   * the capture itself. The `animations:'disabled'` + `caret:'hide'` options on
+   * each screenshot freeze CSS animations/transitions and hide the text caret.
+   * Together these remove the timing-driven drift seen on i18n / post-save views.
+   */
+  private async stabilize(): Promise<void> {
+    const page = this.requirePage();
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {});
+    // async/void so Playwright does not try to serialize the FontFaceSet.
+    await page.evaluate(async () => { await document.fonts?.ready; }).catch(() => {});
   }
 
   // ---------------------------------------------------------------------------

@@ -24,6 +24,8 @@
 import type { GtaaWorld } from '../support/world';
 import { ApiExecutor } from '../../test-execution/api/api-executor';
 import { ClassifiedError, FailureBucket } from '../../shared/failure-buckets';
+import { textContains } from '../support/text-match';
+import { resolvePizzaId } from '../../test-adaptation/clients/catalog-lookup';
 import { runVisualCheck } from './visual-check';
 import type { ApiExecutionResult } from '../../test-execution/api/api-executor';
 
@@ -75,12 +77,27 @@ export class PizzaBuilderUseCase {
       const result = await this.api.executeEndpoint('pizzaBuilder', 'pizzaBuilder.listPizzas', {
         market,
         language,
+        authToken: String(this.world.state.token ?? ''),
       });
       this.assertApiPass(result, 'pizzaBuilder.listPizzas');
       return;
     }
+    // The customizer is a MODAL opened from the catalog — there is no /builder
+    // (or /customizer) URL route on web (confirmed against the AUT). Land on the
+    // catalog for this market, then open a pizza card to surface the builder
+    // modal. (Mobile reaches the builder the same way: via a catalog card.)
     const ui = await this.world.ui();
-    await ui.navigate(`/builder?item=${encodeURIComponent(item)}&market=${encodeURIComponent(market)}&lang=${encodeURIComponent(language)}`);
+    // Resolve the pizza's catalog id (p01…) to click its specific add button,
+    // which opens the customizer modal (`pizzaBuilderScreen`).
+    const id =
+      (await resolvePizzaId(item, {
+        token: String(this.world.state.token ?? ''),
+        language,
+        market,
+      })) ?? item;
+    await ui.navigate(`/catalog?market=${encodeURIComponent(market)}&lang=${encodeURIComponent(language)}`);
+    await ui.waitForVisible('catalog.catalogScreen');
+    await ui.click(`catalog.addToCartButton#id=${id}`);
     await ui.waitForVisible(REF.builderScreen);
   }
 
@@ -116,7 +133,7 @@ export class PizzaBuilderUseCase {
     const ui = await this.world.ui();
     const sizeText = await ui.getText(REF.sizeOptionsList);
     const toppingsText = await ui.getText(REF.toppingsList);
-    if (!sizeText.includes(sizeSection) || !toppingsText.includes(toppingsSection)) {
+    if (!textContains(sizeText, sizeSection) || !textContains(toppingsText, toppingsSection)) {
       throw new ClassifiedError(
         FailureBucket.ASSERTION_FAILURE,
         `expected section labels "${sizeSection}" and "${toppingsSection}" to be visible`,
@@ -128,7 +145,7 @@ export class PizzaBuilderUseCase {
   async assertTotalLabel(label: string): Promise<void> {
     const ui = await this.world.ui();
     const text = await ui.getText(REF.priceText);
-    if (!text.includes(label)) {
+    if (!textContains(text, label)) {
       throw new ClassifiedError(
         FailureBucket.ASSERTION_FAILURE,
         `expected the estimated total label "${label}" to be visible`,
@@ -212,7 +229,10 @@ export class PizzaBuilderUseCase {
     }
 
     const ui = await this.world.ui();
-    const text = (await ui.getText(NAV_CART_COUNT)).replace(/\D/g, '');
+    // The cart badge is not rendered when the cart is empty; absence means 0
+    // (reading it would otherwise time out on the empty-cart precondition).
+    const badgeShown = await ui.isVisible(NAV_CART_COUNT);
+    const text = badgeShown ? (await ui.getText(NAV_CART_COUNT)).replace(/\D/g, '') : '';
     const actual = text === '' ? 0 : Number(text);
     if (this.world.state.builderConfirmed && actual !== expected) {
       throw new ClassifiedError(
@@ -230,6 +250,7 @@ export class PizzaBuilderUseCase {
         'pizzaBuilder',
         'pizzaBuilder.addCustomizedToCart',
         {
+          authToken: String(this.world.state.token ?? ''),
           pizzaId: String(d.item ?? ''),
           size: String(d.size ?? ''),
           toppings: d.toppings.join(','),

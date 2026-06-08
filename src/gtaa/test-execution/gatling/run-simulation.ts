@@ -18,6 +18,11 @@
  * JVM/CLI dependency is confined to {@link runGatlingCli} so that
  * {@link buildSummary} and the parser can be exercised without Gatling.
  */
+// Load .env in THIS (parent) process so appConfig() resolves the real
+// API_BASE_URL. Without it the parent injects the localhost default into the
+// child env, which then shadows the child's own `-r dotenv/config` (dotenv
+// never overrides an already-set var).
+import 'dotenv/config';
 import { spawn } from 'node:child_process';
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';

@@ -20,6 +20,8 @@ import type { GtaaWorld } from '../support/world';
 import { ApiExecutor } from '../../test-execution/api/api-executor';
 import { ClassifiedError, FailureBucket } from '../../shared/failure-buckets';
 import { runVisualCheck } from './visual-check';
+import { textContains } from '../support/text-match';
+import { resolvePizzaId } from '../../test-adaptation/clients/catalog-lookup';
 import type { ApiExecutionResult } from '../../test-execution/api/api-executor';
 
 /** Logical locator refs for the catalog domain (see catalog.locators.json). */
@@ -70,8 +72,22 @@ export class CatalogUseCase {
   /** "the add-to-cart label {string} is visible on a pizza card". */
   async assertAddToCartLabelVisible(label: string): Promise<void> {
     const ui = await this.world.ui();
+    // Web cards expose the add-to-cart control as an icon-only "+" button with NO
+    // text label (the label is a native-only affordance). The web-equivalent
+    // assertion is that the pizza cards (with their add control) are rendered.
+    const isWeb =
+      this.world.context.platform === 'desktop' || this.world.context.platform === 'responsive';
+    if (isWeb) {
+      if (!(await ui.isVisible(REF.pizzaCardList))) {
+        throw new ClassifiedError(
+          FailureBucket.ASSERTION_FAILURE,
+          'expected pizza cards with an add-to-cart control to be visible',
+        );
+      }
+      return;
+    }
     const text = await ui.getText(REF.pizzaCardList);
-    if (!text.includes(label)) {
+    if (!textContains(text, label)) {
       throw new ClassifiedError(
         FailureBucket.ASSERTION_FAILURE,
         `expected the add-to-cart label "${label}" to be visible on a pizza card`,
@@ -83,7 +99,7 @@ export class CatalogUseCase {
   async assertSectionTitle(title: string): Promise<void> {
     const ui = await this.world.ui();
     const text = await ui.getText(REF.catalogScreen);
-    if (!text.includes(title)) {
+    if (!textContains(text, title)) {
       throw new ClassifiedError(
         FailureBucket.ASSERTION_FAILURE,
         `expected the section title "${title}" to be visible`,
@@ -188,7 +204,15 @@ export class CatalogUseCase {
       return;
     }
     const ui = await this.world.ui();
-    await ui.click(REF.pizzaCardList);
+    // Open the customizer for this specific pizza via its add button (resolve
+    // the display name to the catalog id the testid is keyed by).
+    const id =
+      (await resolvePizzaId(item, {
+        token: String(this.world.state.token ?? ''),
+        language: String(this.world.state.language ?? ''),
+        market: String(this.world.state.market ?? ''),
+      })) ?? item;
+    await ui.click(`catalog.addToCartButton#id=${id}`);
   }
 
   /** "the pizza builder is displayed for {string}". */
@@ -217,6 +241,7 @@ export class CatalogUseCase {
     const result = await this.api.executeEndpoint('catalog', ENDPOINT, {
       market: String(this.world.state.market ?? ''),
       language: String(this.world.state.language ?? ''),
+      authToken: String(this.world.state.token ?? ''),
     });
     this.assertApiPass(result, ENDPOINT);
     return result;

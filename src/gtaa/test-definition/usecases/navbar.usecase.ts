@@ -16,6 +16,7 @@
  */
 import type { GtaaWorld } from '../support/world';
 import { ClassifiedError, FailureBucket } from '../../shared/failure-buckets';
+import { textContains } from '../support/text-match';
 import { runVisualCheck } from './visual-check';
 
 /** Logical locator refs for the navbar domain (see navbar.locators.json). */
@@ -107,7 +108,7 @@ export class NavbarUseCase {
   async assertAddToCartLabelReflects(expected: string): Promise<void> {
     const ui = await this.requireUi();
     const text = await ui.getText(CATALOG_CARDS);
-    if (!text.includes(expected)) {
+    if (!textContains(text, expected)) {
       throw new ClassifiedError(
         FailureBucket.ASSERTION_FAILURE,
         `expected the catalog add-to-cart label to reflect "${expected}" but got "${text}"`,

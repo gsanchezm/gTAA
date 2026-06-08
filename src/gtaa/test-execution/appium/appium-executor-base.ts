@@ -42,6 +42,15 @@ type RemoteOptions = {
   logLevel?: string;
 };
 
+/** Transient Appium session-bootstrap failures that are worth a retry. */
+const TRANSIENT_SESSION_REGEX =
+  /never started|socket hang up|econnrefused|econnreset|cannot start|unable to|could not start|instrumentation process|not responding|timed? ?out/i;
+
+function isTransientSessionError(error: unknown): boolean {
+  const msg = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+  return TRANSIENT_SESSION_REGEX.test(msg);
+}
+
 export abstract class AppiumExecutorBase implements UiDriver {
   /** Public, neutral platform tag required by the UiDriver contract. */
   readonly platform: string;
@@ -80,18 +89,32 @@ export abstract class AppiumExecutorBase implements UiDriver {
       capabilities: this.buildCapabilities(),
     };
 
-    try {
-      // remote() returns the rich webdriverio Browser; we only consume the
-      // loose MobileSession surface, so narrow through unknown.
-      this.session = (await remote(options as never)) as unknown as MobileSession;
-    } catch (err) {
-      throw new ClassifiedError(
-        FailureBucket.MOBILE_SESSION_FAILURE,
-        `Failed to start Appium ${this.platform} session at ` +
-          `${this.config.appiumHost}:${this.config.appiumPort}`,
-        { cause: err },
-      );
+    // Retry the session bootstrap on transient hiccups (a freshly-reset app can
+    // briefly fail to start its main activity, the UIAutomator2 socket can hang
+    // up, etc.). Mirrors the reference's session-bootstrap resilience.
+    const maxAttempts = 3;
+    let lastErr: unknown;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        // remote() returns the rich webdriverio Browser; we only consume the
+        // loose MobileSession surface, so narrow through unknown.
+        this.session = (await remote(options as never)) as unknown as MobileSession;
+        return;
+      } catch (err) {
+        lastErr = err;
+        if (attempt < maxAttempts && isTransientSessionError(err)) {
+          await new Promise((resolve) => setTimeout(resolve, 2000 * attempt));
+          continue;
+        }
+        break;
+      }
     }
+    throw new ClassifiedError(
+      FailureBucket.MOBILE_SESSION_FAILURE,
+      `Failed to start Appium ${this.platform} session at ` +
+        `${this.config.appiumHost}:${this.config.appiumPort}`,
+      { cause: lastErr },
+    );
   }
 
   async stop(): Promise<void> {
@@ -110,11 +133,27 @@ export abstract class AppiumExecutorBase implements UiDriver {
     }
   }
 
-  /** Mobile apps launch with the session, so navigation is a no-op. */
-  async navigate(_url: string): Promise<void> {
-    // Intentional no-op for mobile: the app under test is launched as part of
-    // session creation via the `appium:app` capability.
-    return;
+  /**
+   * Mobile has no URL routing — map the known app routes to a bottom-nav tap so
+   * a use case that "navigates" to a section reaches it the way a user would.
+   * `catalog` is the post-login default; `profile`/`checkout` are bottom-nav
+   * tabs (`~nav-*`). Routes without a tab (e.g. order-success, reached via its
+   * own flow) are a no-op.
+   */
+  async navigate(url: string): Promise<void> {
+    const section = url.split('?')[0].replace(/^\/+/, '').split('/')[0];
+    const navTestId: Record<string, string> = {
+      catalog: 'nav-catalog',
+      checkout: 'nav-checkout',
+      profile: 'nav-profile',
+    };
+    const target = navTestId[section];
+    if (!target) return;
+    try {
+      await safeTap(this.requireSession(), `~${target}`, this.platformKind, this.timeoutMs);
+    } catch {
+      // Best-effort: the app may already be on the target section.
+    }
   }
 
   // ---- UiDriver interactions (delegated to shared defensive helpers) ------

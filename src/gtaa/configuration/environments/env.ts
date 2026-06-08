@@ -39,7 +39,13 @@ export interface MobileConfig {
   appiumHost: string;
   appiumPort: number;
   timeoutMs: number;
-  android: { appPath: string; deviceName: string; platformVersion: string };
+  android: {
+    appPath: string;
+    deviceName: string;
+    platformVersion: string;
+    unlockType: string;
+    unlockKey: string;
+  };
   ios: { appPath: string; deviceName: string; platformVersion: string };
 }
 
@@ -80,6 +86,8 @@ export function mobileConfig(): MobileConfig {
       appPath: str('ANDROID_APP_PATH'),
       deviceName: str('ANDROID_DEVICE_NAME', 'Android Emulator'),
       platformVersion: str('ANDROID_PLATFORM_VERSION'),
+      unlockType: str('ANDROID_UNLOCK_TYPE'),
+      unlockKey: str('ANDROID_UNLOCK_KEY'),
     },
     ios: {
       appPath: str('IOS_APP_PATH'),

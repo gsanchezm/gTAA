@@ -64,8 +64,35 @@ function splitRef(ref: string): { domain: string; key: string } {
   return { domain: ref.slice(0, idx), key: ref.slice(idx + 1) };
 }
 
+/**
+ * Parameterized refs carry `{placeholder}` values after a `#`, e.g.
+ * "catalog.addToCartButton#id=p01" -> substitutes {id} in the resolved
+ * selector. This is how the templated locator keys (pizzaCard, addToCartButton,
+ * categoryById, …) become concrete, mirroring the reference's per-item refs
+ * without leaking selectors into the use cases.
+ */
+function parseParams(raw: string | undefined): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!raw) return out;
+  for (const pair of raw.split('&')) {
+    const eq = pair.indexOf('=');
+    if (eq > 0) out[pair.slice(0, eq)] = pair.slice(eq + 1);
+  }
+  return out;
+}
+
+function applyParams(selector: string, params: Record<string, string>): string {
+  return selector.replace(/\{(\w+)\}/g, (match, name: string) =>
+    params[name] !== undefined ? params[name] : match,
+  );
+}
+
 export function resolveLocator(ref: string, platform: Platform): ResolvedLocator {
-  const { domain, key } = splitRef(ref);
+  const hashIdx = ref.indexOf('#');
+  const bareRef = hashIdx >= 0 ? ref.slice(0, hashIdx) : ref;
+  const params = parseParams(hashIdx >= 0 ? ref.slice(hashIdx + 1) : undefined);
+
+  const { domain, key } = splitRef(bareRef);
   const contract = loadContract(domain);
   const entry = contract[key];
   if (entry === undefined) {
@@ -75,34 +102,31 @@ export function resolveLocator(ref: string, platform: Platform): ResolvedLocator
     );
   }
 
-  // A bare string applies to every platform.
-  if (typeof entry === 'string') {
-    return { selector: entry, strategy: platform === 'desktop' || platform === 'responsive' ? 'web' : 'mobile', ref };
-  }
-
   const isWeb = platform === 'desktop' || platform === 'responsive';
-  if (isWeb) {
+
+  let rawSelector: string | undefined;
+  let strategy: 'web' | 'mobile';
+  if (typeof entry === 'string') {
+    rawSelector = entry;
+    strategy = isWeb ? 'web' : 'mobile';
+  } else if (isWeb) {
     const web = entry.web;
-    const selector = typeof web === 'string' ? web : web?.[platform];
-    if (!selector) {
-      throw new ClassifiedError(
-        FailureBucket.LOCATOR_RESOLUTION_FAILURE,
-        `No web/${platform} selector for "${ref}"`,
-      );
-    }
-    return { selector, strategy: 'web', ref };
+    rawSelector = typeof web === 'string' ? web : web?.[platform];
+    strategy = 'web';
+  } else {
+    const mobile = entry.mobile;
+    rawSelector = typeof mobile === 'string' ? mobile : mobile?.[platform as 'android' | 'ios'];
+    strategy = 'mobile';
   }
 
-  const mobile = entry.mobile;
-  const selector =
-    typeof mobile === 'string' ? mobile : mobile?.[platform as 'android' | 'ios'];
-  if (!selector) {
+  if (!rawSelector) {
     throw new ClassifiedError(
       FailureBucket.LOCATOR_RESOLUTION_FAILURE,
-      `No mobile/${platform} selector for "${ref}"`,
+      `No ${strategy}/${platform} selector for "${bareRef}"`,
     );
   }
-  return { selector, strategy: 'mobile', ref };
+
+  return { selector: applyParams(rawSelector, params), strategy, ref: bareRef };
 }
 
 /** Resolve the locator family for visual region/mask resolution. */

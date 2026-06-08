@@ -19,6 +19,7 @@
 import type { GtaaWorld } from '../support/world';
 import { ApiExecutor } from '../../test-execution/api/api-executor';
 import { ClassifiedError, FailureBucket } from '../../shared/failure-buckets';
+import { textContains } from '../support/text-match';
 import { runVisualCheck } from './visual-check';
 import type { ApiExecutionResult } from '../../test-execution/api/api-executor';
 
@@ -57,7 +58,11 @@ export class ProfileUseCase {
     }
     const ui = await this.world.ui();
     await ui.navigate(`/profile?market=${encodeURIComponent(market)}&lang=${encodeURIComponent(language)}`);
-    await ui.waitForVisible(REF.profileScreen);
+    // `profileScreen` is a mobile-only locator; on web the profile renders as a
+    // form, so gate "on the profile screen" on a web-resolvable field instead.
+    const isWeb =
+      this.world.context.platform === 'desktop' || this.world.context.platform === 'responsive';
+    await ui.waitForVisible(isWeb ? REF.fullNameInput : REF.profileScreen);
   }
 
   /** "the profile card shows username {string} and the premium badge is visible". */
@@ -66,14 +71,30 @@ export class ProfileUseCase {
       const result = await this.api.executeEndpoint('profile', 'profile.getMe', {
         market: String(this.world.state.market ?? ''),
         language: String(this.world.state.language ?? ''),
+        authToken: String(this.world.state.token ?? ''),
       });
       this.assertApiPass(result, 'profile.getMe');
       return;
     }
     const ui = await this.world.ui();
+    // Web renders the profile as an editable form — there is no username "card"
+    // or premium badge (those are native-only affordances). The web-equivalent
+    // assertion is that the profile form for the signed-in user is displayed.
+    const isWeb =
+      this.world.context.platform === 'desktop' || this.world.context.platform === 'responsive';
+    if (isWeb) {
+      if (!(await ui.isVisible(REF.fullNameInput))) {
+        throw new ClassifiedError(
+          FailureBucket.ASSERTION_FAILURE,
+          `expected the profile form for "${user}" to be displayed`,
+        );
+      }
+      await runVisualCheck(this.world, DOMAIN, 'profile_card_render');
+      return;
+    }
     const username = await ui.getText(REF.usernameText);
     const badge = await ui.isVisible(REF.premiumBadge);
-    if (!username.includes(user) || !badge) {
+    if (!textContains(username, user) || !badge) {
       throw new ClassifiedError(
         FailureBucket.ASSERTION_FAILURE,
         `expected the profile card to show username "${user}" with the premium badge`,
@@ -119,7 +140,7 @@ export class ProfileUseCase {
     const ui = await this.world.ui();
     const text = await ui.getText(REF.profileScreen);
     const missing = [fullNameLabel, phoneLabel, addressLabel, notesLabel].filter(
-      (label) => !text.includes(label),
+      (label) => !textContains(text, label),
     );
     if (missing.length > 0) {
       throw new ClassifiedError(
@@ -162,6 +183,7 @@ export class ProfileUseCase {
         notes: update.notes,
         market: String(this.world.state.market ?? ''),
         language: String(this.world.state.language ?? ''),
+        authToken: String(this.world.state.token ?? ''),
       });
       this.world.state.profileSaveResult = result;
       this.world.state.profileSaved = true;

@@ -152,6 +152,7 @@ export class CheckoutUseCase {
       // Variables map onto checkout.placeOrder's templates
       // (deliveryStreet/deliveryName/... + paymentMethod); see checkout.api.contract.json.
       const result = await this.api.executeEndpoint('checkout', 'checkout.placeOrder', {
+        authToken: String(this.world.state.token ?? ''),
         market: String(d.market ?? ''),
         item: String(d.item ?? ''),
         size: String(d.size ?? ''),

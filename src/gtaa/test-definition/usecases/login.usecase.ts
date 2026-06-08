@@ -13,9 +13,10 @@
  */
 import type { GtaaWorld } from '../support/world';
 import { ApiExecutor } from '../../test-execution/api/api-executor';
-import { getUser } from '../../test-generation/test-data/users';
+import { getUser } from '../../test-generation/test-data/user-fixtures';
 import { ClassifiedError, FailureBucket } from '../../shared/failure-buckets';
 import { runVisualCheck } from './visual-check';
+import { textContains, textEquals } from '../support/text-match';
 import type { ApiExecutionResult } from '../../test-execution/api/api-executor';
 
 /** Logical locator refs for the login domain (see login.locators.json). */
@@ -93,7 +94,7 @@ export class LoginUseCase {
 
     const ui = await this.world.ui();
     const actual = await ui.getText(REF.loginError);
-    if (!actual.includes(expected)) {
+    if (!textContains(actual, expected)) {
       throw new ClassifiedError(
         FailureBucket.ASSERTION_FAILURE,
         `expected login error to contain "${expected}" but got "${actual}"`,
@@ -137,7 +138,7 @@ export class LoginUseCase {
   async assertLogoutLabel(expected: string): Promise<void> {
     const ui = await this.world.ui();
     const actual = (await ui.getText(REF.logoutButton)).trim();
-    if (actual !== expected) {
+    if (!textEquals(actual, expected)) {
       throw new ClassifiedError(
         FailureBucket.ASSERTION_FAILURE,
         `expected the logout button label to read "${expected}" but got "${actual}"`,
