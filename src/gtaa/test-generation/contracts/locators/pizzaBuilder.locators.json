@@ -29,6 +29,10 @@
       "ios": "-ios class chain:**/XCUIElementTypeOther[`name BEGINSWITH 'btn-size-'`]"
     }
   },
+  "sizeByLabel": {
+    "web": "[data-testid='size-{size}']",
+    "mobile": "~btn-size-{size}"
+  },
   "sizeOptionLabel": {
     "mobile": {
       "android": "android=new UiSelector().resourceIdMatches(\"text-size-(?!price-).*\")",

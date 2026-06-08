@@ -160,7 +160,9 @@ export class PizzaBuilderUseCase {
       return; // Size rides along on the add-to-cart call.
     }
     const ui = await this.world.ui();
-    await ui.click(REF.sizeOptionsList);
+    // Select the SCENARIO's size (testid is keyed by lower-case label), not just
+    // the first size button.
+    await ui.click(`pizzaBuilder.sizeByLabel#size=${size.toLowerCase()}`);
   }
 
   /** "the estimated total reflects the price of size {string}" (@size @visual). */
