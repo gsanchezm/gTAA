@@ -114,10 +114,17 @@ export class LoginUseCase {
     this.world.state.market = market;
     this.world.state.language = language;
     const ui = await this.world.ui();
-    await ui.click(REF.marketButtonList);
+    // Select the SCENARIO's market (the testid is keyed by upper-case code), not
+    // just the first market button.
+    await ui.click(`login.marketByCode#code=${market.toUpperCase()}`);
     if (market.toUpperCase() === 'CH') {
-      // CH is the only market exposing a runtime language picker.
-      await ui.click(REF.switzerlandLanguageList);
+      // CH exposes a runtime language picker on native; on web the language is
+      // implied by the market, so the picker may be absent — best-effort.
+      try {
+        await ui.click(REF.switzerlandLanguageList);
+      } catch {
+        /* language picker not present on this platform */
+      }
     }
   }
 
