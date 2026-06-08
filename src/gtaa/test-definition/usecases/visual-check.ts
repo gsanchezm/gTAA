@@ -46,7 +46,20 @@ export async function runVisualCheck(
   }
 
   const driver = await world.ui();
-  const result = await new PixelmatchVisualExecutor().compareSnapshot(domain, snapshotId, driver);
+  // Pass the scenario's market/language so localized snapshots bucket per
+  // variant (a US capture must not be compared against an MX baseline). Absent
+  // values (e.g. the pre-market login screens) leave the snapshot un-bucketed.
+  const market = world.state.market as string | undefined;
+  const language = world.state.language as string | undefined;
+  // The scenario is the finest bucket: snapshots that share an id across
+  // scenarios (e.g. the invalid-login cases, which carry no market) get a
+  // distinct, stable baseline per scenario instead of colliding.
+  const scenario = world.state.__scenarioName as string | undefined;
+  const result = await new PixelmatchVisualExecutor().compareSnapshot(domain, snapshotId, driver, {
+    market,
+    language,
+    scenario,
+  });
 
   if (result.status === 'FAIL') {
     throw new ClassifiedError(

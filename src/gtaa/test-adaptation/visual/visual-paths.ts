@@ -37,6 +37,36 @@ export interface VisualPathKey {
   snapshotId: string;
   visualPlatform: VisualPlatform;
   visualViewport: VisualViewport;
+  /** Optional scenario-data dimension (country code, e.g. "US"/"MX"). */
+  market?: string;
+  /**
+   * Optional rendering-language dimension. Needed when one snapshot renders
+   * differently per market/language (e.g. the localized catalog, CH-de vs
+   * CH-fr) so each localized variant gets its own baseline instead of colliding.
+   */
+  language?: string;
+  /**
+   * Optional scenario dimension. The finest bucket: a snapshot id can fire from
+   * several scenarios in the same (market, language) — e.g. the invalid-login
+   * cases all share login_screen_invalid_credentials with no market — so keying
+   * by scenario gives each its own stable baseline instead of colliding.
+   */
+  scenario?: string;
+}
+
+/**
+ * Path-safe, lower-cased segment for an optional dimension (omitted when
+ * absent). Non-alphanumeric runs collapse to a single '-' so scenario names
+ * (which carry spaces, slashes, parentheses) are usable as directory names.
+ */
+function optionalSegment(value: string | undefined): string[] {
+  if (!value) return [];
+  const safe = value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 80);
+  return safe ? [safe] : [];
 }
 
 export interface VisualBaselinePaths {
@@ -52,7 +82,15 @@ export interface VisualResultPaths {
 }
 
 function keySegments(key: VisualPathKey): string[] {
-  return [key.feature, key.snapshotId, key.visualPlatform, key.visualViewport];
+  return [
+    key.feature,
+    key.snapshotId,
+    key.visualPlatform,
+    key.visualViewport,
+    ...optionalSegment(key.market),
+    ...optionalSegment(key.language),
+    ...optionalSegment(key.scenario),
+  ];
 }
 
 /** Version-controlled baseline location for a snapshot/platform/viewport. */
