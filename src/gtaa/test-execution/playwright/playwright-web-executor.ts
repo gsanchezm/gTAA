@@ -163,6 +163,22 @@ export class PlaywrightWebExecutor implements UiDriver {
     }
   }
 
+  /**
+   * Evaluate a JS expression in the page (via Playwright's CDP-backed evaluate,
+   * which is NOT subject to page CSP). The caller passes an expression — wrap
+   * multi-statement work in an IIFE, e.g. `(() => { ...; return 'ok'; })()`.
+   * Returns the result coerced to a string (null/undefined -> '').
+   */
+  async evaluate(script: string): Promise<string> {
+    const page = this.requirePage();
+    try {
+      const result = (await page.evaluate(script)) as unknown;
+      return result === undefined || result === null ? '' : String(result);
+    } catch (error) {
+      throw this.classify(error, FailureBucket.UI_ACTION_FAILURE, 'Failed to evaluate script');
+    }
+  }
+
   // ---------------------------------------------------------------------------
   // Visual capture (consumed by the visual executor through UiDriver methods
   // ONLY — no Playwright types cross this boundary).

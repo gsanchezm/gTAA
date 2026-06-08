@@ -17,6 +17,7 @@ import { ApiExecutor } from '../../test-execution/api/api-executor';
 import { ClassifiedError, FailureBucket } from '../../shared/failure-buckets';
 import { textContains } from '../support/text-match';
 import { fetchLatestOrderId } from '../../test-adaptation/clients/order-lookup';
+import { seedWebPersistedStores } from '../support/web-session-seed';
 import { runVisualCheck } from './visual-check';
 import type { ApiExecutionResult } from '../../test-execution/api/api-executor';
 
@@ -74,6 +75,16 @@ export class OrderSuccessUseCase {
       return;
     }
     const ui = await this.world.ui();
+    // The success screen mounts directly (no UI journey), so the app reads its
+    // market/language and auth from persisted localStorage. Prime the origin,
+    // seed the Zustand stores (so the page renders in the scenario's language
+    // instead of US/English), then land on the success screen with the orderId.
+    await ui.navigate('/');
+    await seedWebPersistedStores(ui, {
+      market: String(this.world.state.market ?? 'US'),
+      language: String(this.world.state.language ?? 'en'),
+      token: String(this.world.state.token ?? ''),
+    });
     await ui.navigate(`/order-success?orderId=${encodeURIComponent(this.orderId())}`);
     await ui.waitForVisible(REF.screen);
   }

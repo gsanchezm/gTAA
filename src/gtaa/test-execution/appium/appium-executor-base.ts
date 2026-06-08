@@ -232,6 +232,18 @@ export abstract class AppiumExecutorBase implements UiDriver {
     }
   }
 
+  /**
+   * Native mobile has no page context for arbitrary JS evaluation. Only the
+   * web flows (localStorage seeding, login sentinel) use this; they are guarded
+   * by a platform check upstream and never reach a native executor.
+   */
+  async evaluate(_script: string): Promise<string> {
+    throw new ClassifiedError(
+      FailureBucket.UI_ACTION_FAILURE,
+      'evaluate() is web-only; native mobile executors do not support script evaluation',
+    );
+  }
+
   // ---- helpers -------------------------------------------------------------
 
   /**
