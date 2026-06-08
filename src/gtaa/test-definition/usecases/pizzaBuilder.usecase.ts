@@ -39,6 +39,11 @@ const REF = {
   toppingsList: 'pizzaBuilder.toppingsList',
   confirmButton: 'pizzaBuilder.confirmAddToCartButton',
   priceText: 'pizzaBuilder.customizerPriceText',
+  // Dedicated section/total LABEL nodes (mobile) — distinct from the option
+  // lists and the running-total value.
+  sectionSizeText: 'pizzaBuilder.sectionSizeText',
+  sectionToppingsText: 'pizzaBuilder.sectionToppingsText',
+  totalLabelText: 'pizzaBuilder.estimatedTotalLabel',
 } as const;
 
 /** Navbar cart-count badge is a cross-domain affordance the builder mutates. */
@@ -157,8 +162,10 @@ export class PizzaBuilderUseCase {
   /** "the section labels {string} and {string} are visible". */
   async assertSectionLabels(sizeSection: string, toppingsSection: string): Promise<void> {
     const ui = await this.world.ui();
-    const sizeText = await ui.getText(REF.sizeOptionsList);
-    const toppingsText = await ui.getText(REF.toppingsList);
+    // The section LABELS live on dedicated text nodes (~text-section-size /
+    // ~text-section-toppings), not the option lists below them.
+    const sizeText = await ui.getText(REF.sectionSizeText);
+    const toppingsText = await ui.getText(REF.sectionToppingsText);
     if (!textContains(sizeText, sizeSection) || !textContains(toppingsText, toppingsSection)) {
       throw new ClassifiedError(
         FailureBucket.ASSERTION_FAILURE,
@@ -170,7 +177,9 @@ export class PizzaBuilderUseCase {
   /** "the estimated total label {string} is visible". */
   async assertTotalLabel(label: string): Promise<void> {
     const ui = await this.world.ui();
-    const text = await ui.getText(REF.priceText);
+    // The total LABEL ("Estimated total" / "Total estimado" / …) is a separate
+    // node from the running-total value.
+    const text = await ui.getText(REF.totalLabelText);
     if (!textContains(text, label)) {
       throw new ClassifiedError(
         FailureBucket.ASSERTION_FAILURE,

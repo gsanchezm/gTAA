@@ -113,16 +113,10 @@ export class SessionUseCase {
     await ui.click('navbar.navLogoutLink');
     await ui.waitForVisible('login.loginScreen');
     await ui.click(`login.marketByCode#code=${target}`);
-    if (target === 'CH') {
-      // CH exposes a runtime language picker on the login screen once the market
-      // is chosen (de default + fr). Select the scenario's language so the
-      // post-login UI (catalog "All" pill, builder add-to-cart CTA, labels)
-      // localizes to French instead of falling back to German. The lang buttons
-      // share the navbar's ~btn-lang-{code} testids. Best-effort.
-      const lang = String(this.world.state.language ?? '').toLowerCase();
-      const langRef = lang === 'fr' ? 'navbar.languageFRButton' : 'navbar.languageDEButton';
-      await ui.click(langRef).catch(() => undefined);
-    }
+    // NOTE: CH/fr localization is a known gap on native mobile — the login-screen
+    // language picker (de default + fr) is not reliably tappable at this point
+    // (the ~btn-lang-{code} click times out and regressed CH/de), so CH falls
+    // back to German. Left for a dedicated mobile-language pass.
     await ui.type(REF.usernameInput, user.username);
     await ui.type(REF.passwordInput, user.password);
     await ui.click(REF.loginButton);
