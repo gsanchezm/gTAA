@@ -8,10 +8,22 @@ results/
 reports/
 logs/
 visual-results/
-target/gatling/
+target/
 
-# Keep metrics directory structure but ignore generated run artifacts only when requested
-# (Generated metrics under metrics/raw and metrics/processed are committed as experiment evidence.)
+# Ad-hoc scratch / probe scripts (underscore-prefixed).
+scripts/_*.mjs
+
+# Metrics: curated evidence under metrics/raw and metrics/processed is committed
+# (sample-run-*, run-<uuid>, schemas, processed CSVs, summaries). Local non-curated
+# runs are emitted as <platform>-<uuid> by the test:* scripts — ignore those.
+metrics/raw/**/android-*
+metrics/raw/**/ios-*
+metrics/raw/**/desktop-*
+metrics/raw/**/responsive-*
+metrics/raw/**/api-*
+# Local Gatling runs are emitted as run-<uuid>/ (no platform prefix); curated
+# performance evidence stays under sample-run-*.
+metrics/raw/gatling/run-*
 
 # OS / editor
 .DS_Store
@@ -19,3 +31,6 @@ Thumbs.db
 .idea/
 .vscode/
 *.log
+CLAUDE.md
+
+assets/apps/android/omnipizza-release.apk
