@@ -40,6 +40,9 @@ const CATALOG_CARDS = 'catalog.pizzaCardList';
 const CATALOG_SCREEN = 'catalog.catalogScreen';
 /** The customizer modal's confirm CTA carries the localized "add" label on web. */
 const BUILDER_CONFIRM = 'pizzaBuilder.confirmAddToCartButton';
+/** Native-mobile bottom-nav refs (no hamburger drawer on android/ios). */
+const BOTTOM_NAV_CONTAINER = 'navbar.bottomNavContainer';
+const BOTTOM_NAV_LIST = 'navbar.bottomNavList';
 
 /** First catalog card's pizza id (strips the add-to-cart-<id>-<viewport> testid). */
 const FIRST_CARD_ID_JS = `(() => {
@@ -99,6 +102,13 @@ export class NavbarUseCase {
   /** "they open the mobile navigation menu". */
   async openMobileMenu(): Promise<void> {
     const ui = await this.requireUi();
+    if (!isWebPlatform(this.world)) {
+      // Native mobile: the bottom nav is always visible — there is no hamburger
+      // to open. Assert its container is present as the readiness signal.
+      await ui.waitForVisible(BOTTOM_NAV_CONTAINER);
+      return;
+    }
+    // Web-responsive: click the hamburger to reveal the drawer.
     await ui.click(REF.mobileMenuButton);
     await ui.waitForVisible(REF.mobileNavCatalogLink);
   }
@@ -106,6 +116,19 @@ export class NavbarUseCase {
   /** "the mobile menu shows catalog, checkout, profile, and logout entries". */
   async assertMobileMenuEntries(): Promise<void> {
     const ui = await this.requireUi();
+    if (!isWebPlatform(this.world)) {
+      // Native mobile: the bottom nav exposes catalog/checkout/profile via a
+      // list selector; logout lives on the profile screen, NOT the bottom nav,
+      // so it is intentionally not asserted here (matches the reference).
+      if (!(await ui.isVisible(BOTTOM_NAV_LIST))) {
+        throw new ClassifiedError(
+          FailureBucket.ASSERTION_FAILURE,
+          'expected the mobile bottom nav to expose the catalog/checkout/profile entries',
+        );
+      }
+      await runVisualCheck(this.world, DOMAIN, 'navbar_mobile_menu_opened');
+      return;
+    }
     const visible =
       (await ui.isVisible(REF.mobileNavCatalogLink)) &&
       (await ui.isVisible(REF.mobileNavCheckoutLink)) &&
