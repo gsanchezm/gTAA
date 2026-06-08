@@ -12,7 +12,8 @@
     "mobile": "~text-header-brand"
   },
   "navLogo": {
-    "web": "[data-testid='nav-logo']"
+    "web": "[data-testid='nav-logo']",
+    "mobile": "~img-header-logo"
   },
   "navCatalogLink": {
     "web": "[data-testid='nav-catalog']"
