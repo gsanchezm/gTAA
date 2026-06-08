@@ -88,5 +88,35 @@ export class SessionUseCase {
     // there.
     const usesNavbarLogout = this.world.context.platform === 'desktop';
     await ui.waitForVisible(usesNavbarLogout ? REF.logoutButton : 'catalog.catalogScreen');
+    // Mobile login defaults to the US market (no market is chosen on the login
+    // screen); track it so ensureMarket() knows when a switch is required.
+    this.world.state.loggedInMarket = 'US';
+  }
+
+  /**
+   * Ensure the app is showing `market`. On native mobile the market is only
+   * selectable on the login screen, so switching means re-logging in with that
+   * market selected. Web carries the market in URL params, so this is a no-op
+   * there (and on the api path).
+   */
+  async ensureMarket(market: string): Promise<void> {
+    const platform = this.world.context.platform;
+    if (platform !== 'android' && platform !== 'ios') return;
+    if (this.world.context.driver === 'api') return;
+
+    const target = market.toUpperCase();
+    if (String(this.world.state.loggedInMarket ?? 'US').toUpperCase() === target) return;
+
+    const alias = String(this.world.state.userAlias ?? 'standard_user');
+    const user = getUser(alias);
+    const ui = await this.world.ui();
+    await ui.click('navbar.navLogoutLink');
+    await ui.waitForVisible('login.loginScreen');
+    await ui.click(`login.marketByCode#code=${target}`);
+    await ui.type(REF.usernameInput, user.username);
+    await ui.type(REF.passwordInput, user.password);
+    await ui.click(REF.loginButton);
+    await ui.waitForVisible('catalog.catalogScreen');
+    this.world.state.loggedInMarket = target;
   }
 }

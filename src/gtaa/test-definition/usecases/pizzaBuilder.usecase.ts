@@ -26,6 +26,7 @@ import { ApiExecutor } from '../../test-execution/api/api-executor';
 import { ClassifiedError, FailureBucket } from '../../shared/failure-buckets';
 import { textContains } from '../support/text-match';
 import { resolvePizzaId } from '../../test-adaptation/clients/catalog-lookup';
+import { SessionUseCase } from './session.usecase';
 import { runVisualCheck } from './visual-check';
 import type { ApiExecutionResult } from '../../test-execution/api/api-executor';
 
@@ -86,6 +87,7 @@ export class PizzaBuilderUseCase {
     // (or /customizer) URL route on web (confirmed against the AUT). Land on the
     // catalog for this market, then open a pizza card to surface the builder
     // modal. (Mobile reaches the builder the same way: via a catalog card.)
+    await new SessionUseCase(this.world).ensureMarket(market);
     const ui = await this.world.ui();
     // Resolve the pizza's catalog id (p01…) to click its specific add button,
     // which opens the customizer modal (`pizzaBuilderScreen`).

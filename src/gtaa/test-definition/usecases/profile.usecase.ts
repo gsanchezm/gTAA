@@ -20,6 +20,7 @@ import type { GtaaWorld } from '../support/world';
 import { ApiExecutor } from '../../test-execution/api/api-executor';
 import { ClassifiedError, FailureBucket } from '../../shared/failure-buckets';
 import { textContains } from '../support/text-match';
+import { SessionUseCase } from './session.usecase';
 import { runVisualCheck } from './visual-check';
 import type { ApiExecutionResult } from '../../test-execution/api/api-executor';
 
@@ -56,6 +57,7 @@ export class ProfileUseCase {
     if (this.world.context.driver === 'api') {
       return;
     }
+    await new SessionUseCase(this.world).ensureMarket(market);
     const ui = await this.world.ui();
     await ui.navigate(`/profile?market=${encodeURIComponent(market)}&lang=${encodeURIComponent(language)}`);
     // `profileScreen` is a mobile-only locator; on web the profile renders as a

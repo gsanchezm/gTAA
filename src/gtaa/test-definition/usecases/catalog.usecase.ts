@@ -22,6 +22,7 @@ import { ClassifiedError, FailureBucket } from '../../shared/failure-buckets';
 import { runVisualCheck } from './visual-check';
 import { textContains } from '../support/text-match';
 import { resolvePizzaId } from '../../test-adaptation/clients/catalog-lookup';
+import { SessionUseCase } from './session.usecase';
 import type { ApiExecutionResult } from '../../test-execution/api/api-executor';
 
 /** Logical locator refs for the catalog domain (see catalog.locators.json). */
@@ -48,6 +49,7 @@ export class CatalogUseCase {
     if (this.world.context.driver === 'api') {
       return; // The api path asserts against catalog.getPizzas in later steps.
     }
+    await new SessionUseCase(this.world).ensureMarket(market);
     const ui = await this.world.ui();
     await ui.navigate(`/catalog?market=${encodeURIComponent(market)}&lang=${encodeURIComponent(language)}`);
     await ui.waitForVisible(REF.catalogScreen);

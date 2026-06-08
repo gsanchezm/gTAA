@@ -27,6 +27,10 @@
   "navProfileLink": {
     "web": "[data-testid='nav-profile']"
   },
+  "navLogoutLink": {
+    "web": "[data-testid='nav-logout']",
+    "mobile": "~nav-logout"
+  },
   "navbarTitleText": {
     "mobile": "~text-navbar-title"
   },
