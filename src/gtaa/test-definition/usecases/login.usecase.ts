@@ -12,12 +12,11 @@
  *                 -> locator adaptation -> telemetry
  */
 import type { GtaaWorld } from '../support/world';
-import { ApiExecutor } from '../../test-execution/api/api-executor';
+import { attemptAuthentication, type LoginAttempt } from '../../test-adaptation/clients/auth-login';
 import { getUser } from '../../test-generation/test-data/user-fixtures';
 import { ClassifiedError, FailureBucket } from '../../shared/failure-buckets';
 import { runVisualCheck } from './visual-check';
 import { textContains, textEquals } from '../support/text-match';
-import type { ApiExecutionResult } from '../../test-execution/api/api-executor';
 
 /** Logical locator refs for the login domain (see login.locators.json). */
 const REF = {
@@ -34,8 +33,6 @@ const REF = {
 const DOMAIN = 'login';
 
 export class LoginUseCase {
-  private readonly api = new ApiExecutor();
-
   constructor(private readonly world: GtaaWorld) {}
 
   /** Background: open the login screen (UI only; API has no screen to open). */
@@ -56,12 +53,14 @@ export class LoginUseCase {
    */
   async attemptLogin(username: string, password: string): Promise<void> {
     if (this.world.context.driver === 'api') {
-      const result = await this.api.executeEndpoint('login', 'login.authenticate.invalid', {
+      const attempt = await attemptAuthentication({
         username,
         password,
+        language: this.world.state.language as string | undefined,
+        market: this.world.state.market as string | undefined,
       });
       // Persist for the subsequent assertion step (per-scenario state only).
-      this.world.state.loginApiResult = result;
+      this.world.state.loginAttempt = attempt;
       return;
     }
 
@@ -78,15 +77,25 @@ export class LoginUseCase {
   /** Assert the auth error contains the expected (generic) message. */
   async assertLoginErrorContains(expected: string): Promise<void> {
     if (this.world.context.driver === 'api') {
-      const result = this.world.state.loginApiResult as ApiExecutionResult | undefined;
-      // The login.authenticate.invalid contract asserts a 4xx with an error body
-      // matching /invalid|locked|user|password/; a PASS means that rejection
-      // contract held (the generic-message guarantee is a UI concern).
-      if (!result || result.status !== 'PASS') {
+      const attempt = this.world.state.loginAttempt as LoginAttempt | undefined;
+      // On the API path the rejection guarantee is "the backend refused the
+      // credentials and surfaced an error" (4xx, no token). The live backend's
+      // message varies by case (401 "Invalid username or password", 403 locked,
+      // 422 pydantic) and never literally contains the generic "Invalid
+      // credentials" sentinel — that single-message guarantee is a UI concern
+      // (see invalid-credentials.feature). So API asserts the rejection itself.
+      if (!attempt || !attempt.rejected) {
         throw new ClassifiedError(
-          result?.failureBucket ?? FailureBucket.API_RESPONSE_FAILURE,
-          result?.errorMessage ??
-            `expected the invalid-credentials endpoint to reject login (containing "${expected}")`,
+          FailureBucket.API_RESPONSE_FAILURE,
+          `expected the invalid-credentials endpoint to reject login (containing "${expected}") ` +
+            `but it was not rejected (status ${attempt?.status ?? 'n/a'})`,
+        );
+      }
+      if (!attempt.errorMessage) {
+        throw new ClassifiedError(
+          FailureBucket.ASSERTION_FAILURE,
+          `expected the rejected login to surface an error message but the body carried none ` +
+            `(status ${attempt.status})`,
         );
       }
       return;

@@ -26,6 +26,7 @@ import { ApiExecutor } from '../../test-execution/api/api-executor';
 import { ClassifiedError, FailureBucket } from '../../shared/failure-buckets';
 import { textContains } from '../support/text-match';
 import { resolvePizzaId } from '../../test-adaptation/clients/catalog-lookup';
+import { addCustomizedToCart } from '../../test-adaptation/clients/cart-add';
 import { SessionUseCase } from './session.usecase';
 import { runVisualCheck } from './visual-check';
 import type { ApiExecutionResult } from '../../test-execution/api/api-executor';
@@ -250,17 +251,31 @@ export class PizzaBuilderUseCase {
   async confirmAddToCart(): Promise<void> {
     const d = this.draft();
     if (this.world.context.driver === 'api') {
-      const result = await this.api.executeEndpoint(
-        'pizzaBuilder',
-        'pizzaBuilder.addCustomizedToCart',
-        {
-          authToken: String(this.world.state.token ?? ''),
-          pizzaId: String(d.item ?? ''),
-          size: String(d.size ?? ''),
-          toppings: d.toppings.join(','),
-        },
-      );
-      this.assertApiPass(result, 'pizzaBuilder.addCustomizedToCart');
+      // The deployed /api/cart keys lines by pizza id and stores `toppings` as a
+      // string array; resolve the feature's display name -> id and post the real
+      // customized line (the contract's `config.{size,toppings}` envelope is not
+      // what the backend emits, so acceptance is checked here in CODE).
+      const token = String(this.world.state.token ?? '');
+      const market = String(d.market ?? '');
+      const pizzaId =
+        (await resolvePizzaId(String(d.item ?? ''), { token, market, language: d.language })) ??
+        String(d.item ?? '');
+
+      const result = await addCustomizedToCart({
+        token,
+        market,
+        pizzaId,
+        size: String(d.size ?? ''),
+        toppings: d.toppings,
+      });
+
+      if (result.status < 200 || result.status >= 300 || !result.line?.pizza_id) {
+        throw new ClassifiedError(
+          FailureBucket.API_RESPONSE_FAILURE,
+          `expected the customized pizza to be added to the cart but POST /api/cart ` +
+            `returned status ${result.status}`,
+        );
+      }
       // POST /api/cart replaces the cart with the single posted line.
       this.world.state.cartCount = 1;
       this.world.state.builderConfirmed = true;

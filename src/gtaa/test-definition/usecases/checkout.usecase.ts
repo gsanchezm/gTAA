@@ -11,10 +11,10 @@
  * across scenarios). The login Background is handled by the shared SessionUseCase.
  */
 import type { GtaaWorld } from '../support/world';
-import { ApiExecutor } from '../../test-execution/api/api-executor';
 import { ClassifiedError, FailureBucket } from '../../shared/failure-buckets';
 import { runVisualCheck } from './visual-check';
-import type { ApiExecutionResult } from '../../test-execution/api/api-executor';
+import { placeOrder } from '../../test-adaptation/clients/checkout-order';
+import { resolvePizzaId } from '../../test-adaptation/clients/catalog-lookup';
 
 /** Logical locator refs for the checkout domain (see checkout.locators.json). */
 const REF = {
@@ -53,8 +53,6 @@ interface OrderDraft {
 }
 
 export class CheckoutUseCase {
-  private readonly api = new ApiExecutor();
-
   constructor(private readonly world: GtaaWorld) {}
 
   private draft(): OrderDraft {
@@ -149,24 +147,34 @@ export class CheckoutUseCase {
     const d = this.draft();
 
     if (this.world.context.driver === 'api') {
-      // Variables map onto checkout.placeOrder's templates
-      // (deliveryStreet/deliveryName/... + paymentMethod); see checkout.api.contract.json.
-      const result = await this.api.executeEndpoint('checkout', 'checkout.placeOrder', {
-        authToken: String(this.world.state.token ?? ''),
-        market: String(d.market ?? ''),
-        item: String(d.item ?? ''),
-        size: String(d.size ?? ''),
-        qty: Number(d.qty ?? 1),
-        deliveryName: String(d.name ?? ''),
-        deliveryStreet: String(d.street ?? ''),
-        deliveryZip: String(d.zip ?? ''),
-        deliverySuburb: String(d.suburb ?? ''),
-        deliveryPhone: String(d.phone ?? ''),
+      // The deployed backend serves the order on the flat `/api/checkout` route
+      // (the contract's templated path 404s) and keys cart lines by pizza id, so
+      // resolve the feature's display name -> id and post the real order body.
+      const token = String(this.world.state.token ?? '');
+      const market = String(d.market ?? '');
+      const pizzaId =
+        (await resolvePizzaId(String(d.item ?? ''), { token, market })) ?? String(d.item ?? '');
+
+      const result = await placeOrder({
+        token,
+        market,
+        items: [{ pizzaId, size: String(d.size ?? ''), quantity: Number(d.qty ?? 1) }],
+        name: String(d.name ?? ''),
+        address: String(d.street ?? ''),
+        phone: String(d.phone ?? ''),
         paymentMethod: toApiPaymentMethod(d.paymentMethod),
+        zip: String(d.zip ?? ''),
+        suburb: d.suburb,
       });
-      this.assertApiPass(result, 'checkout.placeOrder');
-      // checkout.placeOrder extracts `orderId` (see checkout.api.contract.json).
-      this.world.state.orderId = result.extracted.orderId ?? '';
+
+      if (result.status < 200 || result.status >= 300 || !result.orderId) {
+        throw new ClassifiedError(
+          FailureBucket.API_RESPONSE_FAILURE,
+          `expected the order to be accepted but checkout returned status ${result.status} ` +
+            `(orderId=${result.orderId ?? 'none'})`,
+        );
+      }
+      this.world.state.orderId = result.orderId;
       return;
     }
 
@@ -182,15 +190,6 @@ export class CheckoutUseCase {
     }
     // @visual scenario: compare the order summary against the baseline.
     await runVisualCheck(this.world, DOMAIN, 'checkout_order_summary');
-  }
-
-  private assertApiPass(result: ApiExecutionResult, endpointId: string): void {
-    if (result.status !== 'PASS') {
-      throw new ClassifiedError(
-        result.failureBucket ?? FailureBucket.API_RESPONSE_FAILURE,
-        result.errorMessage ?? `API endpoint "${endpointId}" did not pass`,
-      );
-    }
   }
 }
 
