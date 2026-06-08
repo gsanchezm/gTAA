@@ -48,6 +48,8 @@ export type MobileElement = {
   setValue(value: string): Promise<void>;
   clearValue?(): Promise<void>;
   getText(): Promise<string>;
+  /** Find descendant elements (used to aggregate a container's text on Android). */
+  $$?(selector: string): Promise<MobileElement[]>;
   takeScreenshot(): Promise<string>;
   /**
    * webdriverio's native scroll-into-view. On Android (UiAutomator2) this is
@@ -330,6 +332,23 @@ export async function safeGetText(
   let result = '';
   await withStaleRetry(session, selector, platform, timeoutMs, async (element) => {
     result = await element.getText();
+    // Android containers do not aggregate descendant text the way web innerText
+    // does, so a layout container reports an empty string. When that happens,
+    // join the text of the container's descendant TextViews so "is X visible in
+    // this region" assertions work the same as on web.
+    if (platform === 'android' && result.trim() === '' && element.$$) {
+      try {
+        const nodes = await element.$$('.//android.widget.TextView');
+        const texts: string[] = [];
+        for (const node of nodes) {
+          const t = await node.getText();
+          if (t && t.trim()) texts.push(t.trim());
+        }
+        result = texts.join(' ');
+      } catch {
+        // Best-effort aggregation; fall back to the (empty) container text.
+      }
+    }
   });
   return result;
 }
