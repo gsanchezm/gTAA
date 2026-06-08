@@ -181,18 +181,11 @@ export class LoginUseCase {
     this.world.state.market = market;
     this.world.state.language = language;
     const ui = await this.world.ui();
-    // Select the SCENARIO's market (the testid is keyed by upper-case code), not
-    // just the first market button.
+    // The market is chosen on the login screen (testid keyed by upper-case code).
+    // CH is the only market with two locales (de default + fr); that picker lives
+    // in the POST-LOGIN navbar, so it is applied in loginWithAlias once the navbar
+    // renders — not on the login screen.
     await ui.click(`login.marketByCode#code=${market.toUpperCase()}`);
-    if (market.toUpperCase() === 'CH') {
-      // CH exposes a runtime language picker on native; on web the language is
-      // implied by the market, so the picker may be absent — best-effort.
-      try {
-        await ui.click(REF.switzerlandLanguageList);
-      } catch {
-        /* language picker not present on this platform */
-      }
-    }
   }
 
   /** Sign in with a known-good alias (used after market+language selection). */
@@ -203,6 +196,16 @@ export class LoginUseCase {
     await ui.type(REF.passwordInput, user.password);
     await ui.click(REF.loginButton);
     await ui.waitForVisible(REF.logoutButton);
+    // CH defaults to German after market selection; switch to French via the
+    // post-login navbar language button so the localized chrome (logout label)
+    // reflects the requested locale.
+    if (String(this.world.state.market ?? '').toUpperCase() === 'CH') {
+      const lang = String(this.world.state.language ?? '').toLowerCase();
+      if (lang === 'french' || lang === 'fr') {
+        await ui.click('navbar.languageFRButton');
+        await ui.waitForVisible(REF.logoutButton);
+      }
+    }
   }
 
   /**

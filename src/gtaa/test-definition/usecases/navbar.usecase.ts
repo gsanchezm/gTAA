@@ -17,6 +17,7 @@
 import type { GtaaWorld } from '../support/world';
 import { ClassifiedError, FailureBucket } from '../../shared/failure-buckets';
 import { textContains } from '../support/text-match';
+import { seedWebPersistedStores } from '../support/web-session-seed';
 import { runVisualCheck } from './visual-check';
 
 /** Logical locator refs for the navbar domain (see navbar.locators.json). */
@@ -37,6 +38,21 @@ const REF = {
 /** Catalog add-to-cart label is read from the catalog card list (cross-domain). */
 const CATALOG_CARDS = 'catalog.pizzaCardList';
 const CATALOG_SCREEN = 'catalog.catalogScreen';
+/** The customizer modal's confirm CTA carries the localized "add" label on web. */
+const BUILDER_CONFIRM = 'pizzaBuilder.confirmAddToCartButton';
+
+/** First catalog card's pizza id (strips the add-to-cart-<id>-<viewport> testid). */
+const FIRST_CARD_ID_JS = `(() => {
+  const el = document.querySelector("[data-testid^='add-to-cart-']");
+  if (!el) return '';
+  return (el.getAttribute('data-testid') || '').replace(/^add-to-cart-/, '').replace(/-(desktop|responsive)$/, '');
+})()`;
+
+/** Dismiss the customizer modal (Escape) so it doesn't leak into a snapshot. */
+const DISMISS_MODAL_JS = `(() => {
+  document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, which: 27, bubbles: true }));
+  return 'dismissed';
+})()`;
 
 const DOMAIN = 'navbar';
 
@@ -48,6 +64,13 @@ export class NavbarUseCase {
     this.world.state.market = market;
     this.world.state.language = language;
     const ui = await this.requireUi();
+    // Seed the persisted market/language so the navbar renders the right locale
+    // (and, for CH, exposes the header language switcher) instead of US/English.
+    await seedWebPersistedStores(ui, {
+      market,
+      language,
+      token: String(this.world.state.token ?? ''),
+    });
     await ui.navigate(`/catalog?market=${encodeURIComponent(market)}&lang=${encodeURIComponent(language)}`);
     await ui.waitForVisible(REF.navLogo);
   }
@@ -107,6 +130,35 @@ export class NavbarUseCase {
   /** "the catalog add-to-cart label reflects {string}". */
   async assertAddToCartLabelReflects(expected: string): Promise<void> {
     const ui = await this.requireUi();
+    const isWeb =
+      this.world.context.platform === 'desktop' || this.world.context.platform === 'responsive';
+    if (isWeb) {
+      // The per-card "+" button is icon-only on web (no text/aria-label by
+      // design); the localized add label ("Ajouter"/"Hinzufügen") lives on the
+      // customizer modal's confirm CTA. Open the modal on the first card, read
+      // its label, then close it — the web-equivalent of the native card label.
+      const pizzaId = (await ui.evaluate(FIRST_CARD_ID_JS)).trim();
+      if (!pizzaId) {
+        throw new ClassifiedError(
+          FailureBucket.ASSERTION_FAILURE,
+          `expected a catalog card to read the add-to-cart label "${expected}" but none rendered`,
+        );
+      }
+      await ui.click(`catalog.addToCartButton#id=${pizzaId}`);
+      await ui.waitForVisible(BUILDER_CONFIRM);
+      const label = await ui.getText(BUILDER_CONFIRM);
+      // Close the modal best-effort so it doesn't leak into a later snapshot.
+      await ui.evaluate(DISMISS_MODAL_JS).catch(() => undefined);
+      if (!textContains(label, expected)) {
+        throw new ClassifiedError(
+          FailureBucket.ASSERTION_FAILURE,
+          `expected the add-to-cart label to reflect "${expected}" but got "${label}"`,
+        );
+      }
+      await runVisualCheck(this.world, DOMAIN, 'navbar_header_language_switcher');
+      return;
+    }
+
     const text = await ui.getText(CATALOG_CARDS);
     if (!textContains(text, expected)) {
       throw new ClassifiedError(
