@@ -129,24 +129,18 @@ export class ProfileUseCase {
     }
     const ui = await this.world.ui();
     if (!isWebPlatform(this.world)) {
-      // Native mobile: the form is taller than the viewport (and a prior fill
-      // leaves it scrolled to the notes field), so no single scroll position
-      // shows all four inputs. Scroll to each in turn and check it's displayed.
-      const fields: ReadonlyArray<readonly [string, string]> = [
-        [REF.fullNameInput, 'full name'],
-        [REF.phoneInput, 'phone'],
-        [REF.addressInput, 'address'],
-        [REF.notesInput, 'notes'],
-      ];
-      const missing: string[] = [];
-      for (const [ref, name] of fields) {
-        await ui.scrollTo(ref);
-        if (!(await ui.isVisible(ref))) missing.push(name);
-      }
-      if (missing.length > 0) {
+      // Native mobile: the notes input is the last field and sits below the fold,
+      // so its visibility check never resolves without scrolling. Check the top
+      // fields, scroll the notes field into view, then check it.
+      const topVisible =
+        (await ui.isVisible(REF.fullNameInput)) &&
+        (await ui.isVisible(REF.phoneInput)) &&
+        (await ui.isVisible(REF.addressInput));
+      await ui.scrollTo(REF.notesInput);
+      if (!topVisible || !(await ui.isVisible(REF.notesInput))) {
         throw new ClassifiedError(
           FailureBucket.ASSERTION_FAILURE,
-          `expected the full name, phone, address, and notes inputs to be visible (missing: ${missing.join(', ')})`,
+          'expected the full name, phone, address, and notes inputs to be visible',
         );
       }
       if (this.world.state.profileSaved) {
@@ -187,16 +181,16 @@ export class ProfileUseCase {
       // screen container. Read the top three, scroll the notes label into view,
       // then read it.
       const missing: string[] = [];
-      const checks: ReadonlyArray<readonly [string, string]> = [
+      const topChecks: Array<readonly [string, string]> = [
         [REF.fullNameLabel, fullNameLabel],
         [REF.phoneLabel, phoneLabel],
         [REF.addressLabel, addressLabel],
-        [REF.notesLabel, notesLabel],
       ];
-      for (const [ref, expected] of checks) {
-        await ui.scrollTo(ref);
+      for (const [ref, expected] of topChecks) {
         if (!textContains(await ui.getText(ref), expected)) missing.push(expected);
       }
+      await ui.scrollTo(REF.notesLabel);
+      if (!textContains(await ui.getText(REF.notesLabel), notesLabel)) missing.push(notesLabel);
       if (missing.length > 0) {
         throw new ClassifiedError(
           FailureBucket.ASSERTION_FAILURE,
