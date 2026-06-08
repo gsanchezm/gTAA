@@ -38,6 +38,13 @@ const REF = {
 const DOMAIN = 'catalog';
 const ENDPOINT = 'catalog.getPizzas';
 
+/**
+ * Demo backend pizza id space (p01..p12). On native mobile there is no
+ * list-by-pattern read, so per-card text nodes (~text-pizza-name-{id}) are
+ * probed across this stable range; only the on-screen subset resolves.
+ */
+const DEFAULT_PIZZA_IDS = Array.from({ length: 12 }, (_, i) => `p${String(i + 1).padStart(2, '0')}`);
+
 export class CatalogUseCase {
   private readonly api = new ApiExecutor();
 
@@ -102,11 +109,17 @@ export class CatalogUseCase {
       }
       return;
     }
-    const text = await ui.getText(REF.pizzaCardList);
-    if (!textContains(text, label)) {
+    // Native mobile: the card's "+" is an icon (~btn-add-pizza-{id}), not a text
+    // label; the localized add-to-cart string lives on the builder's CTA. Open
+    // the builder on the first pizza, read the CTA, close, then assert.
+    await ui.click('catalog.addToCartButton#id=p01');
+    await ui.waitForVisible('pizzaBuilder.confirmAddToCartButton');
+    const cta = (await ui.getText('pizzaBuilder.confirmAddToCartButton')).trim();
+    await ui.click('pizzaBuilder.closeBuilderButton').catch(() => undefined);
+    if (!textContains(cta, label)) {
       throw new ClassifiedError(
         FailureBucket.ASSERTION_FAILURE,
-        `expected the add-to-cart label "${label}" to be visible on a pizza card`,
+        `expected the add-to-cart label "${label}" on the builder CTA but got "${cta}"`,
       );
     }
   }
@@ -114,6 +127,21 @@ export class CatalogUseCase {
   /** "the section title {string} is visible". */
   async assertSectionTitle(title: string): Promise<void> {
     const ui = await this.world.ui();
+    if (!isWebPlatform(this.world)) {
+      // Native mobile: the catalog has no dedicated section-title node; the
+      // localized pizza term surfaces on the "All" category pill
+      // (~text-category-all: "All Pizza" / "Todas las Pizzas" / "Alle Pizzen").
+      // Tolerate singular/plural so "Pizzas" matches "All Pizza".
+      const actual = (await ui.getText('catalog.categoryLabel#id=all')).trim().toLowerCase();
+      const wanted = title.trim().toLowerCase();
+      if (!actual.includes(wanted) && !actual.includes(wanted.replace(/s$/, ''))) {
+        throw new ClassifiedError(
+          FailureBucket.ASSERTION_FAILURE,
+          `expected the section title "${title}" to be visible (All-category pill read "${actual}")`,
+        );
+      }
+      return;
+    }
     const text = await ui.getText(REF.catalogScreen);
     if (!textContains(text, title)) {
       throw new ClassifiedError(
@@ -151,6 +179,26 @@ export class CatalogUseCase {
       return;
     }
     const ui = await this.world.ui();
+    if (!isWebPlatform(this.world)) {
+      // Native mobile: read the on-screen pizza-name nodes (~text-pizza-name-{id});
+      // RN virtualizes the grid, so only the visible subset resolves. Probe the
+      // demo id range, then assert at least one card is visible and every visible
+      // name contains the query (the search narrowed the grid correctly).
+      const names: string[] = [];
+      for (const id of DEFAULT_PIZZA_IDS) {
+        if (await ui.isVisible(`catalog.pizzaName#id=${id}`)) {
+          names.push((await ui.getText(`catalog.pizzaName#id=${id}`)).trim());
+        }
+      }
+      const q = query.toLowerCase();
+      if (names.length === 0 || !names.every((n) => n.toLowerCase().includes(q))) {
+        throw new ClassifiedError(
+          FailureBucket.ASSERTION_FAILURE,
+          `expected only pizzas whose name contains "${query}" to remain visible (saw: ${names.join(', ') || 'none'})`,
+        );
+      }
+      return;
+    }
     const text = await ui.getText(REF.pizzaCardList);
     if (!text.toLowerCase().includes(query.toLowerCase())) {
       throw new ClassifiedError(

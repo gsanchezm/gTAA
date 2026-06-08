@@ -113,6 +113,16 @@ export class SessionUseCase {
     await ui.click('navbar.navLogoutLink');
     await ui.waitForVisible('login.loginScreen');
     await ui.click(`login.marketByCode#code=${target}`);
+    if (target === 'CH') {
+      // CH exposes a runtime language picker on the login screen once the market
+      // is chosen (de default + fr). Select the scenario's language so the
+      // post-login UI (catalog "All" pill, builder add-to-cart CTA, labels)
+      // localizes to French instead of falling back to German. The lang buttons
+      // share the navbar's ~btn-lang-{code} testids. Best-effort.
+      const lang = String(this.world.state.language ?? '').toLowerCase();
+      const langRef = lang === 'fr' ? 'navbar.languageFRButton' : 'navbar.languageDEButton';
+      await ui.click(langRef).catch(() => undefined);
+    }
     await ui.type(REF.usernameInput, user.username);
     await ui.type(REF.passwordInput, user.password);
     await ui.click(REF.loginButton);
