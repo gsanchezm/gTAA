@@ -15,6 +15,17 @@
  * navigates to the target screen.
  */
 import type { UiDriver } from '../../test-adaptation/drivers/ui-driver';
+import type { GtaaWorld } from './world';
+
+/**
+ * True for the web platforms (desktop + responsive), where localStorage seeding
+ * and page `evaluate()` apply. Native mobile (android/ios) uses deep-link params
+ * / re-login instead and does not support `evaluate()`.
+ */
+export function isWebPlatform(world: GtaaWorld): boolean {
+  const platform = world.context.platform;
+  return platform === 'desktop' || platform === 'responsive';
+}
 
 export interface WebSeedArgs {
   market: string;

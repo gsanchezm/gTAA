@@ -17,7 +17,7 @@
 import type { GtaaWorld } from '../support/world';
 import { ClassifiedError, FailureBucket } from '../../shared/failure-buckets';
 import { textContains } from '../support/text-match';
-import { seedWebPersistedStores } from '../support/web-session-seed';
+import { seedWebPersistedStores, isWebPlatform } from '../support/web-session-seed';
 import { runVisualCheck } from './visual-check';
 
 /** Logical locator refs for the navbar domain (see navbar.locators.json). */
@@ -64,13 +64,16 @@ export class NavbarUseCase {
     this.world.state.market = market;
     this.world.state.language = language;
     const ui = await this.requireUi();
-    // Seed the persisted market/language so the navbar renders the right locale
-    // (and, for CH, exposes the header language switcher) instead of US/English.
-    await seedWebPersistedStores(ui, {
-      market,
-      language,
-      token: String(this.world.state.token ?? ''),
-    });
+    // WEB ONLY: seed the persisted market/language so the navbar renders the
+    // right locale (and, for CH, exposes the header language switcher) instead
+    // of US/English. Native mobile gets its market via re-login + deep link.
+    if (isWebPlatform(this.world)) {
+      await seedWebPersistedStores(ui, {
+        market,
+        language,
+        token: String(this.world.state.token ?? ''),
+      });
+    }
     await ui.navigate(`/catalog?market=${encodeURIComponent(market)}&lang=${encodeURIComponent(language)}`);
     await ui.waitForVisible(REF.navLogo);
   }

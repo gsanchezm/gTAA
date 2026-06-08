@@ -16,7 +16,7 @@ import { runVisualCheck } from './visual-check';
 import { placeOrder } from '../../test-adaptation/clients/checkout-order';
 import { resolvePizzaId } from '../../test-adaptation/clients/catalog-lookup';
 import { addCustomizedToCart } from '../../test-adaptation/clients/cart-add';
-import { seedWebPersistedStores } from '../support/web-session-seed';
+import { seedWebPersistedStores, isWebPlatform } from '../support/web-session-seed';
 
 /** Logical locator refs for the checkout domain (see checkout.locators.json). */
 const REF = {
@@ -70,9 +70,20 @@ export class CheckoutUseCase {
   /** "they are ordering in market {string}". */
   async setMarket(market: string): Promise<void> {
     this.draft().market = market;
-    // Record only. The web checkout page is opened in provideDelivery, AFTER the
-    // cart is populated (addToOrder) and the session seeded — navigating to
-    // /checkout with an empty cart bounces back to the catalog.
+    if (this.world.context.driver === 'api') {
+      return; // Market is sent on the place-order call.
+    }
+    if (isWebPlatform(this.world)) {
+      // Web: record only. The checkout page is opened in provideDelivery, AFTER
+      // the cart is populated (addToOrder) and the session seeded — navigating
+      // to /checkout with an empty cart bounces back to the catalog.
+      return;
+    }
+    // Native mobile: open the checkout screen (the executor maps the route to a
+    // bottom-nav tap); the cart was hydrated on the device.
+    const ui = await this.world.ui();
+    await ui.navigate(`/checkout?market=${encodeURIComponent(market)}`);
+    await ui.waitForVisible(REF.checkoutHeader);
   }
 
   /**
@@ -91,6 +102,9 @@ export class CheckoutUseCase {
     d.qty = qty;
     if (this.world.context.driver === 'api') {
       return; // The api path submits the order line directly in assertOrderAccepted.
+    }
+    if (!isWebPlatform(this.world)) {
+      return; // Native mobile records the line only; the device hydrates its cart.
     }
     // Web: populate the cart via the API so /checkout has a line to order (faster
     // and less flaky than UI cart manipulation; mirrors the reference). Resolve
@@ -120,6 +134,19 @@ export class CheckoutUseCase {
       return; // Address fields ride along on the place-order body.
     }
     const ui = await this.world.ui();
+
+    if (!isWebPlatform(this.world)) {
+      // Native mobile: the checkout screen is already open (setMarket tapped to
+      // it); fill the form fields the device renders.
+      await ui.type(REF.streetInput, street);
+      if (zip) {
+        await ui.type(REF.zipCodeInput, zip);
+      }
+      await ui.type(REF.fullNameInput, name);
+      await ui.type(REF.phoneNumberInput, phone);
+      return;
+    }
+
     const market = String(d.market ?? '').toUpperCase();
     // Seed auth + market so /checkout hydrates the (just-populated) cart and
     // renders the market's address form. Keep the UI language English so the
@@ -169,10 +196,11 @@ export class CheckoutUseCase {
       return; // Card details are not part of the place-order assertion contract.
     }
     const ui = await this.world.ui();
-    // The card form requires the cardholder name; fill it from the delivery name
-    // (mirrors the reference) before the card fields, otherwise place-order
-    // validation blocks and the success screen never renders.
-    if (d.name) {
+    // WEB: the card form requires the cardholder name; fill it from the delivery
+    // name (mirrors the reference) before the card fields, otherwise place-order
+    // validation blocks and the success screen never renders. (Native mobile
+    // keeps its prior card-only fill.)
+    if (isWebPlatform(this.world) && d.name) {
       await ui.type(REF.cardHolderNameInput, d.name);
     }
     await ui.type(REF.cardNumberInput, card);

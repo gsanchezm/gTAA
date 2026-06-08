@@ -27,6 +27,7 @@ import { ClassifiedError, FailureBucket } from '../../shared/failure-buckets';
 import { textContains } from '../support/text-match';
 import { resolvePizzaId } from '../../test-adaptation/clients/catalog-lookup';
 import { addCustomizedToCart } from '../../test-adaptation/clients/cart-add';
+import { isWebPlatform } from '../support/web-session-seed';
 import { SessionUseCase } from './session.usecase';
 import { runVisualCheck } from './visual-check';
 import type { ApiExecutionResult } from '../../test-execution/api/api-executor';
@@ -261,8 +262,22 @@ export class PizzaBuilderUseCase {
     if (!this.world.state.builderConfirmed) {
       return;
     }
-    // Postcondition: poll the badge from the DOM (it updates asynchronously after
-    // the confirm click and, on responsive, is collapsed out of the "visible"
+    if (!isWebPlatform(this.world)) {
+      // Native mobile: read the resolved badge locator (the bottom-nav badge
+      // text node) directly — evaluate() is web-only. Absent badge == 0.
+      const badgeShown = await ui.isVisible(NAV_CART_COUNT);
+      const text = badgeShown ? (await ui.getText(NAV_CART_COUNT)).replace(/\D/g, '') : '';
+      const mobileActual = text === '' ? 0 : Number(text);
+      if (mobileActual !== expected) {
+        throw new ClassifiedError(
+          FailureBucket.ASSERTION_FAILURE,
+          `expected the navbar cart count to be ${expected} but was ${mobileActual}`,
+        );
+      }
+      return;
+    }
+    // Web: poll the badge from the DOM (it updates asynchronously after the
+    // confirm click and, on responsive, is collapsed out of the "visible"
     // check). Absent badge == 0.
     let actual = 0;
     for (let attempt = 0; attempt < CART_COUNT_POLL_ATTEMPTS; attempt++) {

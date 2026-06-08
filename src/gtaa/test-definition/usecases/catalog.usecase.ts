@@ -23,7 +23,7 @@ import { runVisualCheck } from './visual-check';
 import { textContains } from '../support/text-match';
 import { resolvePizzaId } from '../../test-adaptation/clients/catalog-lookup';
 import { SessionUseCase } from './session.usecase';
-import { seedWebPersistedStores } from '../support/web-session-seed';
+import { seedWebPersistedStores, isWebPlatform } from '../support/web-session-seed';
 import type { ApiExecutionResult } from '../../test-execution/api/api-executor';
 
 /** Logical locator refs for the catalog domain (see catalog.locators.json). */
@@ -52,15 +52,19 @@ export class CatalogUseCase {
     }
     await new SessionUseCase(this.world).ensureMarket(market);
     const ui = await this.world.ui();
-    // The catalog localizes off the persisted omnipizza-country store, not the
-    // URL params, so seed it (auth + market + language) before navigating —
-    // otherwise the catalog stays in US/English and localized searches (e.g. MX
-    // "Margarita" vs canonical "Margherita") match nothing.
-    await seedWebPersistedStores(ui, {
-      market,
-      language,
-      token: String(this.world.state.token ?? ''),
-    });
+    // WEB ONLY: the catalog localizes off the persisted omnipizza-country store,
+    // not the URL params, so seed it (auth + market + language) before
+    // navigating — otherwise the catalog stays in US/English and localized
+    // searches (e.g. MX "Margarita" vs canonical "Margherita") match nothing.
+    // On native mobile the market is applied by ensureMarket (re-login) and
+    // localStorage seeding is meaningless (and evaluate() is web-only).
+    if (isWebPlatform(this.world)) {
+      await seedWebPersistedStores(ui, {
+        market,
+        language,
+        token: String(this.world.state.token ?? ''),
+      });
+    }
     await ui.navigate(`/catalog?market=${encodeURIComponent(market)}&lang=${encodeURIComponent(language)}`);
     await ui.waitForVisible(REF.catalogScreen);
   }

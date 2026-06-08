@@ -16,6 +16,7 @@ import { attemptAuthentication, type LoginAttempt } from '../../test-adaptation/
 import { getUser } from '../../test-generation/test-data/user-fixtures';
 import { ClassifiedError, FailureBucket } from '../../shared/failure-buckets';
 import { runVisualCheck } from './visual-check';
+import { isWebPlatform } from '../support/web-session-seed';
 import { textContains, textEquals } from '../support/text-match';
 
 /** Logical locator refs for the login domain (see login.locators.json). */
@@ -94,14 +95,16 @@ export class LoginUseCase {
     }
 
     const ui = await this.world.ui();
-    // The OmniPizza login form PRE-FILLS standard_user/pizza123, so an empty
-    // test case must truly clear the React-controlled inputs first (a plain
-    // `type('')` is a no-op and would submit the valid demo creds, logging in).
-    await ui.evaluate(CLEAR_LOGIN_INPUTS_JS);
-    // Plant a sentinel before the click: the FE reloads the page on a 401
-    // (wiping window globals and never rendering the error banner), so the
-    // assertion can detect that reload-as-rejection by checking the sentinel.
-    await ui.evaluate(`(() => { window.${LOGIN_SENTINEL} = '1'; return 'ok'; })()`);
+    // WEB ONLY: the OmniPizza login form PRE-FILLS standard_user/pizza123, so an
+    // empty test case must truly clear the React-controlled inputs first (a
+    // plain `type('')` is a no-op and would submit the valid demo creds). And
+    // the FE reloads the page on a 401 (wiping the banner), so plant a sentinel
+    // before the click to detect that reload-as-rejection. Both use evaluate(),
+    // which is web-only; native mobile types + clicks directly.
+    if (isWebPlatform(this.world)) {
+      await ui.evaluate(CLEAR_LOGIN_INPUTS_JS);
+      await ui.evaluate(`(() => { window.${LOGIN_SENTINEL} = '1'; return 'ok'; })()`);
+    }
     if (username) {
       await ui.type(REF.usernameInput, username);
     }
@@ -154,16 +157,18 @@ export class LoginUseCase {
       await runVisualCheck(this.world, DOMAIN, 'login_screen_invalid_credentials');
       return;
     }
-    // Empty banner: the FE reloaded the page on a 401 (the sentinel planted
-    // before the click is wiped), which IS the rejection — just via the reload
-    // code path rather than the banner. Treat a wiped sentinel as auth-rejected
-    // so the generic-message guarantee stays platform-agnostic.
-    const sentinelAlive = (
-      await ui.evaluate(`typeof window.${LOGIN_SENTINEL} === 'string'`)
-    ).trim();
-    if (sentinelAlive !== 'true') {
-      await runVisualCheck(this.world, DOMAIN, 'login_screen_invalid_credentials');
-      return;
+    // WEB ONLY: an empty banner can mean the FE reloaded the page on a 401 (the
+    // sentinel planted before the click is wiped), which IS the rejection — just
+    // via the reload code path rather than the banner. Treat a wiped sentinel as
+    // auth-rejected. (evaluate() is web-only; native mobile renders the banner.)
+    if (isWebPlatform(this.world)) {
+      const sentinelAlive = (
+        await ui.evaluate(`typeof window.${LOGIN_SENTINEL} === 'string'`)
+      ).trim();
+      if (sentinelAlive !== 'true') {
+        await runVisualCheck(this.world, DOMAIN, 'login_screen_invalid_credentials');
+        return;
+      }
     }
     throw new ClassifiedError(
       FailureBucket.ASSERTION_FAILURE,
