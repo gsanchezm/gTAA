@@ -43,6 +43,23 @@ const REF = {
 /** Navbar cart-count badge is a cross-domain affordance the builder mutates. */
 const NAV_CART_COUNT = 'navbar.navCartCount';
 
+/** Poll budget for the post-confirm cart-count badge (updates asynchronously). */
+const CART_COUNT_POLL_ATTEMPTS = 40;
+const CART_COUNT_POLL_INTERVAL_MS = 300;
+
+/**
+ * Reads the cart-count badge straight from the DOM. On the responsive viewport
+ * the navbar collapses the badge out of Playwright's "visible" check, but the
+ * element is present with its textContent — querySelector finds it regardless.
+ * Absent badge yields '' (treated as 0).
+ */
+const READ_CART_BADGE_JS = `(() => {
+  const el = document.querySelector("[data-testid='nav-cart-count']");
+  return el ? (el.textContent || '').replace(/\\D/g, '') : '';
+})()`;
+
+const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
 const DOMAIN = 'pizzaBuilder';
 
 interface BuilderDraft {
@@ -234,17 +251,25 @@ export class PizzaBuilderUseCase {
     }
 
     const ui = await this.world.ui();
-    // The cart badge is not rendered when the cart is empty; absence means 0
-    // (reading it would otherwise time out on the empty-cart precondition).
-    const badgeShown = await ui.isVisible(NAV_CART_COUNT);
-    const text = badgeShown ? (await ui.getText(NAV_CART_COUNT)).replace(/\D/g, '') : '';
-    const actual = text === '' ? 0 : Number(text);
-    if (this.world.state.builderConfirmed && actual !== expected) {
-      throw new ClassifiedError(
-        FailureBucket.ASSERTION_FAILURE,
-        `expected the navbar cart count to be ${expected} but was ${actual}`,
-      );
+    // The precondition read (before confirm) is informational — the upcoming
+    // confirm replaces the cart, so it never gates.
+    if (!this.world.state.builderConfirmed) {
+      return;
     }
+    // Postcondition: poll the badge from the DOM (it updates asynchronously after
+    // the confirm click and, on responsive, is collapsed out of the "visible"
+    // check). Absent badge == 0.
+    let actual = 0;
+    for (let attempt = 0; attempt < CART_COUNT_POLL_ATTEMPTS; attempt++) {
+      const text = (await ui.evaluate(READ_CART_BADGE_JS)).trim();
+      actual = text === '' ? 0 : Number(text);
+      if (actual === expected) return;
+      await delay(CART_COUNT_POLL_INTERVAL_MS);
+    }
+    throw new ClassifiedError(
+      FailureBucket.ASSERTION_FAILURE,
+      `expected the navbar cart count to be ${expected} but was ${actual}`,
+    );
   }
 
   /** "they confirm add to cart". */
