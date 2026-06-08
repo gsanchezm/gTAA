@@ -31,6 +31,7 @@ import {
   isDisplayed,
   waitForDisplayed,
   captureElement,
+  scrollIntoView,
 } from '../../test-adaptation/drivers/appium/mobile-actions';
 
 /** webdriverio remote() options shape (kept local; tsconfig has types: ["node"]). */
@@ -242,6 +243,11 @@ export abstract class AppiumExecutorBase implements UiDriver {
       FailureBucket.UI_ACTION_FAILURE,
       'evaluate() is web-only; native mobile executors do not support script evaluation',
     );
+  }
+
+  /** Scroll a below-the-fold element into view (UiScrollable on Android). */
+  async scrollTo(ref: string): Promise<void> {
+    await scrollIntoView(this.requireSession(), this.selectorFor(ref), this.platformKind);
   }
 
   // ---- helpers -------------------------------------------------------------

@@ -42,4 +42,11 @@ export interface UiDriver {
    * executors do not support arbitrary script evaluation and throw.
    */
   evaluate(script: string): Promise<string>;
+
+  /**
+   * Bring the element resolved from `ref` into view. On native mobile a field
+   * below the fold (e.g. the profile notes input) is otherwise never "displayed";
+   * on web the form fits the viewport so this is effectively a no-op.
+   */
+  scrollTo(ref: string): Promise<void>;
 }

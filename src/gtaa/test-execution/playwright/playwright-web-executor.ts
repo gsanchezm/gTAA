@@ -179,6 +179,12 @@ export class PlaywrightWebExecutor implements UiDriver {
     }
   }
 
+  /** Scroll the element into view (best-effort; the web form usually fits). */
+  async scrollTo(ref: string): Promise<void> {
+    const locator = this.locate(ref).first();
+    await locator.scrollIntoViewIfNeeded({ timeout: webConfig().timeoutMs }).catch(() => undefined);
+  }
+
   // ---------------------------------------------------------------------------
   // Visual capture (consumed by the visual executor through UiDriver methods
   // ONLY — no Playwright types cross this boundary).

@@ -21,6 +21,8 @@ import { ApiExecutor } from '../../test-execution/api/api-executor';
 import { ClassifiedError, FailureBucket } from '../../shared/failure-buckets';
 import { textContains } from '../support/text-match';
 import { SessionUseCase } from './session.usecase';
+import { isWebPlatform } from '../support/web-session-seed';
+import { fetchProfileFullName } from '../../test-adaptation/clients/profile-lookup';
 import { runVisualCheck } from './visual-check';
 import type { ApiExecutionResult } from '../../test-execution/api/api-executor';
 
@@ -34,7 +36,17 @@ const REF = {
   saveButton: 'profile.saveButton',
   usernameText: 'profile.profileUsernameText',
   premiumBadge: 'profile.premiumBadgeText',
+  // Native-mobile form LABEL nodes (distinct from the inputs).
+  fullNameLabel: 'profile.fullNameLabel',
+  phoneLabel: 'profile.phoneNumberLabel',
+  addressLabel: 'profile.addressLabel',
+  notesLabel: 'profile.notesLabel',
 } as const;
+
+/** Normalize for tolerant name comparison (lowercase, strip non-alphanumeric). */
+function normalizeName(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
 
 const DOMAIN = 'profile';
 
@@ -94,12 +106,16 @@ export class ProfileUseCase {
       await runVisualCheck(this.world, DOMAIN, 'profile_card_render');
       return;
     }
-    const username = await ui.getText(REF.usernameText);
+    // Native mobile: the card renders the (shared, mutable) full_name, not the
+    // login alias. Compare the card against the fresh backend full_name (tolerant
+    // of spacing/case) rather than the literal "standard_user".
+    const fullName = (await fetchProfileFullName(String(this.world.state.token ?? ''))) ?? user;
+    const cardText = await ui.getText(REF.usernameText);
     const badge = await ui.isVisible(REF.premiumBadge);
-    if (!textContains(username, user) || !badge) {
+    if (!normalizeName(cardText).includes(normalizeName(fullName)) || !badge) {
       throw new ClassifiedError(
         FailureBucket.ASSERTION_FAILURE,
-        `expected the profile card to show username "${user}" with the premium badge`,
+        `expected the profile card to show "${fullName}" with the premium badge (card read "${cardText}")`,
       );
     }
     // @visual @ui-only render scenario -> profile card snapshot.
@@ -112,6 +128,26 @@ export class ProfileUseCase {
       return; // No UI form on the api path.
     }
     const ui = await this.world.ui();
+    if (!isWebPlatform(this.world)) {
+      // Native mobile: the notes input is the last field and sits below the fold,
+      // so its visibility check never resolves without scrolling. Check the top
+      // fields, scroll the notes field into view, then check it.
+      const topVisible =
+        (await ui.isVisible(REF.fullNameInput)) &&
+        (await ui.isVisible(REF.phoneInput)) &&
+        (await ui.isVisible(REF.addressInput));
+      await ui.scrollTo(REF.notesInput);
+      if (!topVisible || !(await ui.isVisible(REF.notesInput))) {
+        throw new ClassifiedError(
+          FailureBucket.ASSERTION_FAILURE,
+          'expected the full name, phone, address, and notes inputs to be visible',
+        );
+      }
+      if (this.world.state.profileSaved) {
+        await runVisualCheck(this.world, DOMAIN, 'profile_post_save');
+      }
+      return;
+    }
     const visible =
       (await ui.isVisible(REF.fullNameInput)) &&
       (await ui.isVisible(REF.phoneInput)) &&
@@ -140,6 +176,29 @@ export class ProfileUseCase {
     notesLabel: string,
   ): Promise<void> {
     const ui = await this.world.ui();
+    if (!isWebPlatform(this.world)) {
+      // Native mobile: each label is a dedicated text node, not aggregated on the
+      // screen container. Read the top three, scroll the notes label into view,
+      // then read it.
+      const missing: string[] = [];
+      const topChecks: Array<readonly [string, string]> = [
+        [REF.fullNameLabel, fullNameLabel],
+        [REF.phoneLabel, phoneLabel],
+        [REF.addressLabel, addressLabel],
+      ];
+      for (const [ref, expected] of topChecks) {
+        if (!textContains(await ui.getText(ref), expected)) missing.push(expected);
+      }
+      await ui.scrollTo(REF.notesLabel);
+      if (!textContains(await ui.getText(REF.notesLabel), notesLabel)) missing.push(notesLabel);
+      if (missing.length > 0) {
+        throw new ClassifiedError(
+          FailureBucket.ASSERTION_FAILURE,
+          `expected the form labels to be visible; missing: ${missing.join(', ')}`,
+        );
+      }
+      return;
+    }
     const text = await ui.getText(REF.profileScreen);
     const missing = [fullNameLabel, phoneLabel, addressLabel, notesLabel].filter(
       (label) => !textContains(text, label),
