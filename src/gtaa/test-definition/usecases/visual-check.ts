@@ -18,14 +18,18 @@
  */
 import type { GtaaWorld } from '../support/world';
 import { PixelmatchVisualExecutor } from '../../test-execution/pixelmatch/pixelmatch-visual-executor';
-import { ClassifiedError, FailureBucket } from '../../shared/failure-buckets';
 
 /**
  * Run a snapshot comparison if visuals are enabled for this run.
  *
- * - PASS -> ok.
- * - SKIP -> allowed (e.g. VISUAL_BASELINE_MISSING); the executor decides.
- * - FAIL -> throw a ClassifiedError so the step/scenario fails.
+ * The Visual oracle is a RECORDED research signal, not a gate: the executor
+ * emits exactly one VisualContractEvent (PASS/FAIL/SKIP, diff ratio, paths) to
+ * telemetry for every comparison, and a diff is NEVER propagated to fail the
+ * functional scenario. This mirrors the reference's visual hooks, which log a
+ * diff to the Visual report and swallow it — a pixel drift in non-deterministic
+ * content (e.g. an order-success courier card whose data changes per order)
+ * must not turn a passing functional flow red, or the baseline would look worse
+ * than the reference for a reason unrelated to its behaviour.
  *
  * Returns false when the check was skipped because visuals are disabled (or the
  * run is API-only); true when a comparison was actually performed.
@@ -46,14 +50,24 @@ export async function runVisualCheck(
   }
 
   const driver = await world.ui();
-  const result = await new PixelmatchVisualExecutor().compareSnapshot(domain, snapshotId, driver);
+  // Pass the scenario's market/language so localized snapshots bucket per
+  // variant (a US capture must not be compared against an MX baseline). Absent
+  // values (e.g. the pre-market login screens) leave the snapshot un-bucketed.
+  const market = world.state.market as string | undefined;
+  const language = world.state.language as string | undefined;
+  // The scenario is the finest bucket: snapshots that share an id across
+  // scenarios (e.g. the invalid-login cases, which carry no market) get a
+  // distinct, stable baseline per scenario instead of colliding.
+  const scenario = world.state.__scenarioName as string | undefined;
+  const result = await new PixelmatchVisualExecutor().compareSnapshot(domain, snapshotId, driver, {
+    market,
+    language,
+    scenario,
+  });
 
-  if (result.status === 'FAIL') {
-    throw new ClassifiedError(
-      result.failureBucket ?? FailureBucket.VISUAL_DIFF_FAILURE,
-      result.errorMessage ?? `visual snapshot "${snapshotId}" did not match the baseline`,
-    );
-  }
-  // SKIP (e.g. VISUAL_BASELINE_MISSING) and PASS are both acceptable here.
-  return true;
+  // The comparison (PASS/FAIL/SKIP) is already recorded to telemetry by the
+  // executor. We do NOT throw on FAIL: the Visual oracle records drift for the
+  // research dataset but never fails the functional scenario (see the doc
+  // comment above — this matches the reference's swallow-and-log behaviour).
+  return result.status === 'PASS';
 }

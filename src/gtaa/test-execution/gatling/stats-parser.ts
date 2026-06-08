@@ -86,6 +86,67 @@ export function parseStatsContent(content: string): ParsedStats {
   return { requests, responseTime, koRate };
 }
 
+/**
+ * Parses Gatling's console "Global Information" summary block, which the CLI
+ * prints to stdout at the end of every run. This is the machine-readable source
+ * for the `@gatling.io` JS bundle (Gatling 3.14), whose HTML report does NOT
+ * emit a `js/stats.json` — only a `js/stats.js` browser script. The block looks
+ * like:
+ *
+ *   ---- Global Information ----------|---Total---|-----OK----|----KO----
+ *   > request count                   |        3 |        3 |        -
+ *   > mean response time (ms)         |      206 |      206 |        -
+ *   > max response time (ms)          |      378 |      378 |        -
+ *   > response time 95th percentile   |      378 |      378 |        -
+ *
+ * Columns are pipe-delimited (Total | OK | KO); a `-` cell means zero. Returns
+ * null when no Global Information block is present (caller then falls back to the
+ * stats.json reader).
+ */
+export function parseStatsFromConsole(output: string): ParsedStats | null {
+  const lines = output.split(/\r?\n/);
+
+  const cellsFor = (labelRegex: RegExp): string[] | null => {
+    const line = lines.find(
+      (l) => l.trimStart().startsWith('>') && labelRegex.test(l) && l.includes('|'),
+    );
+    if (!line) return null;
+    // ["> label", "<Total>", "<OK>", "<KO>"]
+    return line.split('|').map((cell) => cell.trim());
+  };
+
+  const requestRow = cellsFor(/request count/i);
+  if (!requestRow || requestRow.length < 4) return null;
+
+  const toCount = (cell: string | undefined): number => {
+    const digits = String(cell ?? '').replace(/[^0-9.]/g, '');
+    const value = Number(digits);
+    return digits !== '' && Number.isFinite(value) ? value : 0;
+  };
+  const toTime = (cells: string[] | null): number | null => {
+    if (!cells || cells.length < 2) return null;
+    const digits = String(cells[1] ?? '').replace(/[^0-9.]/g, '');
+    if (digits === '') return null;
+    const value = Number(digits);
+    return Number.isFinite(value) ? value : null;
+  };
+
+  const requests: RequestCounts = {
+    total: toCount(requestRow[1]),
+    ok: toCount(requestRow[2]),
+    ko: toCount(requestRow[3]),
+  };
+
+  const responseTime: ResponseTimeStats = {
+    mean: toTime(cellsFor(/mean response time/i)),
+    p95: toTime(cellsFor(/95th percentile/i)),
+    max: toTime(cellsFor(/max response time/i)),
+  };
+
+  const koRate = requests.total > 0 ? requests.ko / requests.total : 0;
+  return { requests, responseTime, koRate };
+}
+
 /** Resolves the conventional stats.json path inside a Gatling report dir. */
 export function statsFilePath(reportDir: string): string {
   return join(reportDir, 'js', 'stats.json');

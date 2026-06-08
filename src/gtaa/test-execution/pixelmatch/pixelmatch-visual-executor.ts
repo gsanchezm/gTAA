@@ -75,6 +75,7 @@ export class PixelmatchVisualExecutor {
     feature: string,
     snapshotId: string,
     driver: UiDriver,
+    opts?: { market?: string; language?: string; scenario?: string },
   ): Promise<VisualComparisonResult> {
     const startedAt = Date.now();
     const driverPlatform = driver.platform as Platform;
@@ -83,6 +84,12 @@ export class PixelmatchVisualExecutor {
     // Load the declarative contract; selectors are never duplicated here.
     const { snapshot } = loadVisualContract(feature, snapshotId);
     const maskRefs = snapshot.maskRefs ?? [];
+    // The visual contract (byte-identical to the reference) carries BARE locator
+    // keys (e.g. "searchInput", "catalogScreen") because the reference resolver
+    // looks keys up flat. gTAA's resolver requires the "<domain>.<key>" form, so
+    // qualify each ref with this snapshot's feature/domain before resolving.
+    const regionRefResolvable = qualifyVisualRef(feature, snapshot.regionRef);
+    const maskRefsResolvable = maskRefs.map((ref) => qualifyVisualRef(feature, ref));
 
     const baseResult: VisualComparisonResult = {
       status: 'UNKNOWN',
@@ -120,12 +127,18 @@ export class PixelmatchVisualExecutor {
       snapshotId,
       visualPlatform: target.visualPlatform,
       visualViewport: target.visualViewport,
+      // Bucket per (market, language, scenario) so each distinct render gets its
+      // own baseline instead of colliding (catalog_screen US vs MX; the several
+      // invalid-login cases that share one snapshot id with no market).
+      market: opts?.market,
+      language: opts?.language,
+      scenario: opts?.scenario,
     };
 
     // Decide region vs page strategy via the locator adaptation layer.
-    const regionResolves = tryResolveLocator(snapshot.regionRef, driverPlatform) !== null;
+    const regionResolves = tryResolveLocator(regionRefResolvable, driverPlatform) !== null;
     const strategy: 'region' | 'page' = regionResolves ? 'region' : 'page';
-    const resolvedMaskCount = maskRefs.filter(
+    const resolvedMaskCount = maskRefsResolvable.filter(
       (ref) => tryResolveLocator(ref, driverPlatform) !== null,
     ).length;
 
@@ -134,10 +147,21 @@ export class PixelmatchVisualExecutor {
       //    support capture; surface that as a clear SKIP rather than crashing.
       let actualPng: Buffer;
       try {
-        actualPng =
-          strategy === 'region'
-            ? await driver.captureRegion(snapshot.regionRef, { maskRefs })
-            : await driver.capturePage({ maskRefs });
+        if (strategy === 'region') {
+          try {
+            actualPng = await driver.captureRegion(regionRefResolvable, {
+              maskRefs: maskRefsResolvable,
+            });
+          } catch {
+            // The region is declared in the contract but absent on screen at
+            // this step (the UI moved on — e.g. the builder closed, or the flow
+            // navigated to order-success). Fall back to a full-page capture so
+            // the snapshot still records an actual instead of skipping.
+            actualPng = await driver.capturePage({ maskRefs: maskRefsResolvable });
+          }
+        } else {
+          actualPng = await driver.capturePage({ maskRefs: maskRefsResolvable });
+        }
       } catch (captureErr) {
         const isMobile = target.visualPlatform !== 'web';
         const result: VisualComparisonResult = {
@@ -314,6 +338,15 @@ export class PixelmatchVisualExecutor {
     };
     emitVisualEvent(event);
   }
+}
+
+/**
+ * Qualify a visual contract's bare locator key with its feature/domain so the
+ * "<domain>.<key>" locator resolver can find it (e.g. "searchInput" ->
+ * "catalog.searchInput"). Already-qualified refs (containing a ".") pass through.
+ */
+function qualifyVisualRef(feature: string, ref: string): string {
+  return ref.includes('.') ? ref : `${feature}.${ref}`;
 }
 
 /** Map the active driver platform to the visual platform/viewport vocabulary. */

@@ -31,8 +31,10 @@ export type MobileSession = {
   $(selector: string): Promise<MobileElement>;
   isKeyboardShown?(): Promise<boolean>;
   hideKeyboard?(): Promise<void>;
-  /** Execute a mobile: command (e.g. 'mobile: swipe'). */
+  /** Execute a mobile: command (e.g. 'mobile: swipe', 'mobile: scrollGesture'). */
   execute(script: string, ...args: unknown[]): Promise<unknown>;
+  /** Viewport size, used to bound gesture-scroll areas. */
+  getWindowSize?(): Promise<{ width: number; height: number }>;
   takeScreenshot(): Promise<string>;
 };
 
@@ -46,6 +48,8 @@ export type MobileElement = {
   setValue(value: string): Promise<void>;
   clearValue?(): Promise<void>;
   getText(): Promise<string>;
+  /** Find descendant elements (used to aggregate a container's text on Android). */
+  $$?(selector: string): Promise<MobileElement[]>;
   takeScreenshot(): Promise<string>;
   /**
    * webdriverio's native scroll-into-view. On Android (UiAutomator2) this is
@@ -189,16 +193,55 @@ export async function scrollIntoView(
 ): Promise<void> {
   try {
     if (platform === 'android') {
-      // Native WDIO scrollIntoView -> UiScrollable on UiAutomator2.
+      // Native WDIO scrollIntoView -> UiScrollable on UiAutomator2. This assumes
+      // an `android.widget.ScrollView`; React-Native screens often have no such
+      // container, so the call throws ("scrollable element"/"ScrollView"/"not
+      // found"). Swallow that and fall through to a class-agnostic gesture scroll.
       const element = await resolveElement(session, selector);
       if (element.scrollIntoView) {
-        await element.scrollIntoView();
+        try {
+          await element.scrollIntoView();
+        } catch {
+          // Fall through to the gesture fallback below.
+        }
+      }
+      if (!(await isDisplayed(session, selector))) {
+        await androidGestureScroll(session, selector);
       }
       return;
     }
     await swipeUntilDisplayed(session, selector);
   } catch {
     // Non-fatal: leave it to the explicit wait / interaction to classify.
+  }
+}
+
+/**
+ * Android gesture-scroll fallback for RN screens with no recognised ScrollView.
+ * Performs a screen-level `mobile: scrollGesture` (class-agnostic) over a bounded
+ * central area, re-checking visibility between scrolls. Mirrors the reference's
+ * gesture fallback.
+ */
+async function androidGestureScroll(
+  session: MobileSession,
+  selector: string,
+  maxScrolls = 6,
+): Promise<void> {
+  if (!session.getWindowSize) return;
+  const { width, height } = await session.getWindowSize();
+  const area = {
+    left: Math.round(width * 0.1),
+    top: Math.round(height * 0.25),
+    width: Math.round(width * 0.8),
+    height: Math.round(height * 0.5),
+  };
+  for (let attempt = 0; attempt < maxScrolls; attempt += 1) {
+    if (await isDisplayed(session, selector)) return;
+    try {
+      await session.execute('mobile: scrollGesture', { ...area, direction: 'down', percent: 0.85 });
+    } catch {
+      return; // gesture unsupported -> let the caller's wait classify it
+    }
   }
 }
 
@@ -289,6 +332,23 @@ export async function safeGetText(
   let result = '';
   await withStaleRetry(session, selector, platform, timeoutMs, async (element) => {
     result = await element.getText();
+    // Android containers do not aggregate descendant text the way web innerText
+    // does, so a layout container reports an empty string. When that happens,
+    // join the text of the container's descendant TextViews so "is X visible in
+    // this region" assertions work the same as on web.
+    if (platform === 'android' && result.trim() === '' && element.$$) {
+      try {
+        const nodes = await element.$$('.//android.widget.TextView');
+        const texts: string[] = [];
+        for (const node of nodes) {
+          const t = await node.getText();
+          if (t && t.trim()) texts.push(t.trim());
+        }
+        result = texts.join(' ');
+      } catch {
+        // Best-effort aggregation; fall back to the (empty) container text.
+      }
+    }
   });
   return result;
 }

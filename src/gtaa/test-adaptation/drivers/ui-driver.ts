@@ -33,4 +33,20 @@ export interface UiDriver {
   captureRegion(ref: string, options?: CaptureOptions): Promise<Buffer>;
   /** Capture a full-page/screen PNG, applying any masks. */
   capturePage(options?: CaptureOptions): Promise<Buffer>;
+
+  /**
+   * Evaluate a JavaScript expression in the live page context (web only) and
+   * return its result coerced to a string. Used by web-only flows that must
+   * seed persisted state (localStorage) or plant/read a page sentinel — the
+   * same capability the reference exposes via its EVALUATE intent. Native mobile
+   * executors do not support arbitrary script evaluation and throw.
+   */
+  evaluate(script: string): Promise<string>;
+
+  /**
+   * Bring the element resolved from `ref` into view. On native mobile a field
+   * below the fold (e.g. the profile notes input) is otherwise never "displayed";
+   * on web the form fits the viewport so this is effectively a no-op.
+   */
+  scrollTo(ref: string): Promise<void>;
 }

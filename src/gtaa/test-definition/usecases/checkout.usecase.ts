@@ -11,20 +11,24 @@
  * across scenarios). The login Background is handled by the shared SessionUseCase.
  */
 import type { GtaaWorld } from '../support/world';
-import { ApiExecutor } from '../../test-execution/api/api-executor';
 import { ClassifiedError, FailureBucket } from '../../shared/failure-buckets';
 import { runVisualCheck } from './visual-check';
-import type { ApiExecutionResult } from '../../test-execution/api/api-executor';
+import { placeOrder } from '../../test-adaptation/clients/checkout-order';
+import { resolvePizzaId } from '../../test-adaptation/clients/catalog-lookup';
+import { addCustomizedToCart } from '../../test-adaptation/clients/cart-add';
+import { seedWebPersistedStores, isWebPlatform } from '../support/web-session-seed';
 
 /** Logical locator refs for the checkout domain (see checkout.locators.json). */
 const REF = {
   checkoutHeader: 'checkout.checkoutHeader',
   streetInput: 'checkout.streetInput',
   zipCodeInput: 'checkout.zipCodeInput',
+  coloniaInput: 'checkout.coloniaInput',
   fullNameInput: 'checkout.fullNameInput',
   phoneNumberInput: 'checkout.phoneNumberInput',
   paymentCardButton: 'checkout.paymentCardButton',
   paymentCashButton: 'checkout.paymentCashButton',
+  cardHolderNameInput: 'checkout.cardHolderNameInput',
   cardNumberInput: 'checkout.cardNumberInput',
   expiryDateInput: 'checkout.expiryDateInput',
   cvvInput: 'checkout.cvvInput',
@@ -33,6 +37,7 @@ const REF = {
   // lives in the order_success domain contract (cross-domain ref).
   orderSuccessScreen: 'order_success.orderSuccessScreen',
 } as const;
+
 
 const DOMAIN = 'checkout';
 
@@ -53,8 +58,6 @@ interface OrderDraft {
 }
 
 export class CheckoutUseCase {
-  private readonly api = new ApiExecutor();
-
   constructor(private readonly world: GtaaWorld) {}
 
   private draft(): OrderDraft {
@@ -70,6 +73,14 @@ export class CheckoutUseCase {
     if (this.world.context.driver === 'api') {
       return; // Market is sent on the place-order call.
     }
+    if (isWebPlatform(this.world)) {
+      // Web: record only. The checkout page is opened in provideDelivery, AFTER
+      // the cart is populated (addToOrder) and the session seeded — navigating
+      // to /checkout with an empty cart bounces back to the catalog.
+      return;
+    }
+    // Native mobile: open the checkout screen (the executor maps the route to a
+    // bottom-nav tap); the cart was hydrated on the device.
     const ui = await this.world.ui();
     await ui.navigate(`/checkout?market=${encodeURIComponent(market)}`);
     await ui.waitForVisible(REF.checkoutHeader);
@@ -89,6 +100,19 @@ export class CheckoutUseCase {
     d.item = item;
     d.size = size;
     d.qty = qty;
+    if (this.world.context.driver === 'api') {
+      return; // The api path submits the order line directly in assertOrderAccepted.
+    }
+    if (!isWebPlatform(this.world)) {
+      return; // Native mobile records the line only; the device hydrates its cart.
+    }
+    // Web: populate the cart via the API so /checkout has a line to order (faster
+    // and less flaky than UI cart manipulation; mirrors the reference). Resolve
+    // the display name to the catalog id the cart endpoint keys by.
+    const token = String(this.world.state.token ?? '');
+    const market = String(d.market ?? '');
+    const pizzaId = (await resolvePizzaId(item, { token, market })) ?? item;
+    await addCustomizedToCart({ token, market, pizzaId, size, toppings: [] });
   }
 
   /** "they provide delivery details {street} {zip}, {suburb} for {name} {phone}". */
@@ -110,9 +134,42 @@ export class CheckoutUseCase {
       return; // Address fields ride along on the place-order body.
     }
     const ui = await this.world.ui();
+
+    if (!isWebPlatform(this.world)) {
+      // Native mobile: the checkout screen is already open (setMarket tapped to
+      // it); fill the form fields the device renders.
+      await ui.type(REF.streetInput, street);
+      if (zip) {
+        await ui.type(REF.zipCodeInput, zip);
+      }
+      await ui.type(REF.fullNameInput, name);
+      await ui.type(REF.phoneNumberInput, phone);
+      return;
+    }
+
+    const market = String(d.market ?? '').toUpperCase();
+    // Seed auth + market so /checkout hydrates the (just-populated) cart and
+    // renders the market's address form. Keep the UI language English so the
+    // byte-identical checkoutHeader (h1:has-text("Checkout")) still resolves —
+    // the place-order flow has no localized assertions, only the country form.
+    await seedWebPersistedStores(ui, {
+      market,
+      language: 'en',
+      token: String(this.world.state.token ?? ''),
+    });
+    await ui.navigate('/checkout');
+    await ui.waitForVisible(REF.checkoutHeader);
     await ui.type(REF.streetInput, street);
-    if (zip) {
-      await ui.type(REF.zipCodeInput, zip);
+    // Each market renders ONE postal-style slot (the `zip-code` testid): US
+    // zip_code / CH plz come from the zip column; JP prefectura comes from the
+    // suburb column (the form has no separate prefectura input).
+    const zipSlot = market === 'JP' ? suburb || zip : zip;
+    if (zipSlot) {
+      await ui.type(REF.zipCodeInput, zipSlot);
+    }
+    // MX additionally renders a colonia field.
+    if (market === 'MX' && suburb) {
+      await ui.type(REF.coloniaInput, suburb);
     }
     await ui.type(REF.fullNameInput, name);
     await ui.type(REF.phoneNumberInput, phone);
@@ -139,6 +196,13 @@ export class CheckoutUseCase {
       return; // Card details are not part of the place-order assertion contract.
     }
     const ui = await this.world.ui();
+    // WEB: the card form requires the cardholder name; fill it from the delivery
+    // name (mirrors the reference) before the card fields, otherwise place-order
+    // validation blocks and the success screen never renders. (Native mobile
+    // keeps its prior card-only fill.)
+    if (isWebPlatform(this.world) && d.name) {
+      await ui.type(REF.cardHolderNameInput, d.name);
+    }
     await ui.type(REF.cardNumberInput, card);
     await ui.type(REF.expiryDateInput, exp);
     await ui.type(REF.cvvInput, cvv);
@@ -149,23 +213,34 @@ export class CheckoutUseCase {
     const d = this.draft();
 
     if (this.world.context.driver === 'api') {
-      // Variables map onto checkout.placeOrder's templates
-      // (deliveryStreet/deliveryName/... + paymentMethod); see checkout.api.contract.json.
-      const result = await this.api.executeEndpoint('checkout', 'checkout.placeOrder', {
-        market: String(d.market ?? ''),
-        item: String(d.item ?? ''),
-        size: String(d.size ?? ''),
-        qty: Number(d.qty ?? 1),
-        deliveryName: String(d.name ?? ''),
-        deliveryStreet: String(d.street ?? ''),
-        deliveryZip: String(d.zip ?? ''),
-        deliverySuburb: String(d.suburb ?? ''),
-        deliveryPhone: String(d.phone ?? ''),
+      // The deployed backend serves the order on the flat `/api/checkout` route
+      // (the contract's templated path 404s) and keys cart lines by pizza id, so
+      // resolve the feature's display name -> id and post the real order body.
+      const token = String(this.world.state.token ?? '');
+      const market = String(d.market ?? '');
+      const pizzaId =
+        (await resolvePizzaId(String(d.item ?? ''), { token, market })) ?? String(d.item ?? '');
+
+      const result = await placeOrder({
+        token,
+        market,
+        items: [{ pizzaId, size: String(d.size ?? ''), quantity: Number(d.qty ?? 1) }],
+        name: String(d.name ?? ''),
+        address: String(d.street ?? ''),
+        phone: String(d.phone ?? ''),
         paymentMethod: toApiPaymentMethod(d.paymentMethod),
+        zip: String(d.zip ?? ''),
+        suburb: d.suburb,
       });
-      this.assertApiPass(result, 'checkout.placeOrder');
-      // checkout.placeOrder extracts `orderId` (see checkout.api.contract.json).
-      this.world.state.orderId = result.extracted.orderId ?? '';
+
+      if (result.status < 200 || result.status >= 300 || !result.orderId) {
+        throw new ClassifiedError(
+          FailureBucket.API_RESPONSE_FAILURE,
+          `expected the order to be accepted but checkout returned status ${result.status} ` +
+            `(orderId=${result.orderId ?? 'none'})`,
+        );
+      }
+      this.world.state.orderId = result.orderId;
       return;
     }
 
@@ -181,15 +256,6 @@ export class CheckoutUseCase {
     }
     // @visual scenario: compare the order summary against the baseline.
     await runVisualCheck(this.world, DOMAIN, 'checkout_order_summary');
-  }
-
-  private assertApiPass(result: ApiExecutionResult, endpointId: string): void {
-    if (result.status !== 'PASS') {
-      throw new ClassifiedError(
-        result.failureBucket ?? FailureBucket.API_RESPONSE_FAILURE,
-        result.errorMessage ?? `API endpoint "${endpointId}" did not pass`,
-      );
-    }
   }
 }
 

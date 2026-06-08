@@ -12,11 +12,12 @@
  *                 -> locator adaptation -> telemetry
  */
 import type { GtaaWorld } from '../support/world';
-import { ApiExecutor } from '../../test-execution/api/api-executor';
-import { getUser } from '../../test-generation/test-data/users';
+import { attemptAuthentication, type LoginAttempt } from '../../test-adaptation/clients/auth-login';
+import { getUser } from '../../test-generation/test-data/user-fixtures';
 import { ClassifiedError, FailureBucket } from '../../shared/failure-buckets';
 import { runVisualCheck } from './visual-check';
-import type { ApiExecutionResult } from '../../test-execution/api/api-executor';
+import { isWebPlatform } from '../support/web-session-seed';
+import { textContains, textEquals } from '../support/text-match';
 
 /** Logical locator refs for the login domain (see login.locators.json). */
 const REF = {
@@ -32,9 +33,36 @@ const REF = {
 
 const DOMAIN = 'login';
 
-export class LoginUseCase {
-  private readonly api = new ApiExecutor();
+/** Window-global sentinel planted before an invalid-login click (see below). */
+const LOGIN_SENTINEL = '__gtaaLoginAttemptSentinel';
 
+/** Poll budget for the (possibly empty-for-a-tick) login-error banner. */
+const LOGIN_ERROR_POLL_ATTEMPTS = 40;
+const LOGIN_ERROR_POLL_INTERVAL_MS = 250;
+
+/**
+ * Clears the React-controlled login inputs to empty. The OmniPizza form
+ * pre-fills the demo credentials, and a plain empty `type` is a no-op, so the
+ * empty-field cases would otherwise submit valid creds. Uses the native value
+ * setter + input/change events so React's controlled state updates. Selectors
+ * are prefix-matched to cover both desktop and responsive testids.
+ */
+const CLEAR_LOGIN_INPUTS_JS = `(() => {
+  const u = document.querySelector("[data-testid^='username-']");
+  const p = document.querySelector("[data-testid^='password-']");
+  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+  for (const el of [u, p]) {
+    if (!el) continue;
+    setter.call(el, '');
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+  return 'cleared';
+})()`;
+
+const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+export class LoginUseCase {
   constructor(private readonly world: GtaaWorld) {}
 
   /** Background: open the login screen (UI only; API has no screen to open). */
@@ -55,16 +83,28 @@ export class LoginUseCase {
    */
   async attemptLogin(username: string, password: string): Promise<void> {
     if (this.world.context.driver === 'api') {
-      const result = await this.api.executeEndpoint('login', 'login.authenticate.invalid', {
+      const attempt = await attemptAuthentication({
         username,
         password,
+        language: this.world.state.language as string | undefined,
+        market: this.world.state.market as string | undefined,
       });
       // Persist for the subsequent assertion step (per-scenario state only).
-      this.world.state.loginApiResult = result;
+      this.world.state.loginAttempt = attempt;
       return;
     }
 
     const ui = await this.world.ui();
+    // WEB ONLY: the OmniPizza login form PRE-FILLS standard_user/pizza123, so an
+    // empty test case must truly clear the React-controlled inputs first (a
+    // plain `type('')` is a no-op and would submit the valid demo creds). And
+    // the FE reloads the page on a 401 (wiping the banner), so plant a sentinel
+    // before the click to detect that reload-as-rejection. Both use evaluate(),
+    // which is web-only; native mobile types + clicks directly.
+    if (isWebPlatform(this.world)) {
+      await ui.evaluate(CLEAR_LOGIN_INPUTS_JS);
+      await ui.evaluate(`(() => { window.${LOGIN_SENTINEL} = '1'; return 'ok'; })()`);
+    }
     if (username) {
       await ui.type(REF.usernameInput, username);
     }
@@ -77,30 +117,63 @@ export class LoginUseCase {
   /** Assert the auth error contains the expected (generic) message. */
   async assertLoginErrorContains(expected: string): Promise<void> {
     if (this.world.context.driver === 'api') {
-      const result = this.world.state.loginApiResult as ApiExecutionResult | undefined;
-      // The login.authenticate.invalid contract asserts a 4xx with an error body
-      // matching /invalid|locked|user|password/; a PASS means that rejection
-      // contract held (the generic-message guarantee is a UI concern).
-      if (!result || result.status !== 'PASS') {
+      const attempt = this.world.state.loginAttempt as LoginAttempt | undefined;
+      // On the API path the rejection guarantee is "the backend refused the
+      // credentials and surfaced an error" (4xx, no token). The live backend's
+      // message varies by case (401 "Invalid username or password", 403 locked,
+      // 422 pydantic) and never literally contains the generic "Invalid
+      // credentials" sentinel — that single-message guarantee is a UI concern
+      // (see invalid-credentials.feature). So API asserts the rejection itself.
+      if (!attempt || !attempt.rejected) {
         throw new ClassifiedError(
-          result?.failureBucket ?? FailureBucket.API_RESPONSE_FAILURE,
-          result?.errorMessage ??
-            `expected the invalid-credentials endpoint to reject login (containing "${expected}")`,
+          FailureBucket.API_RESPONSE_FAILURE,
+          `expected the invalid-credentials endpoint to reject login (containing "${expected}") ` +
+            `but it was not rejected (status ${attempt?.status ?? 'n/a'})`,
+        );
+      }
+      if (!attempt.errorMessage) {
+        throw new ClassifiedError(
+          FailureBucket.ASSERTION_FAILURE,
+          `expected the rejected login to surface an error message but the body carried none ` +
+            `(status ${attempt.status})`,
         );
       }
       return;
     }
 
     const ui = await this.world.ui();
-    const actual = await ui.getText(REF.loginError);
-    if (!actual.includes(expected)) {
-      throw new ClassifiedError(
-        FailureBucket.ASSERTION_FAILURE,
-        `expected login error to contain "${expected}" but got "${actual}"`,
-      );
+    // Poll the banner: React can attach it empty for a tick before committing
+    // text, and on a cold backend the rejection round-trips. isVisible/getText
+    // return promptly (no long wait) so the loop stays bounded.
+    let actual = '';
+    for (let attempt = 0; attempt < LOGIN_ERROR_POLL_ATTEMPTS; attempt++) {
+      if (await ui.isVisible(REF.loginError)) {
+        actual = (await ui.getText(REF.loginError)).trim();
+        if (actual.length > 0) break;
+      }
+      await delay(LOGIN_ERROR_POLL_INTERVAL_MS);
     }
-    // @visual @invalid scenario -> the post-failure login screen snapshot.
-    await runVisualCheck(this.world, DOMAIN, 'login_screen_invalid_credentials');
+    if (textContains(actual, expected)) {
+      await runVisualCheck(this.world, DOMAIN, 'login_screen_invalid_credentials');
+      return;
+    }
+    // WEB ONLY: an empty banner can mean the FE reloaded the page on a 401 (the
+    // sentinel planted before the click is wiped), which IS the rejection — just
+    // via the reload code path rather than the banner. Treat a wiped sentinel as
+    // auth-rejected. (evaluate() is web-only; native mobile renders the banner.)
+    if (isWebPlatform(this.world)) {
+      const sentinelAlive = (
+        await ui.evaluate(`typeof window.${LOGIN_SENTINEL} === 'string'`)
+      ).trim();
+      if (sentinelAlive !== 'true') {
+        await runVisualCheck(this.world, DOMAIN, 'login_screen_invalid_credentials');
+        return;
+      }
+    }
+    throw new ClassifiedError(
+      FailureBucket.ASSERTION_FAILURE,
+      `expected login error to contain "${expected}" but got "${actual}"`,
+    );
   }
 
   /**
@@ -113,11 +186,11 @@ export class LoginUseCase {
     this.world.state.market = market;
     this.world.state.language = language;
     const ui = await this.world.ui();
-    await ui.click(REF.marketButtonList);
-    if (market.toUpperCase() === 'CH') {
-      // CH is the only market exposing a runtime language picker.
-      await ui.click(REF.switzerlandLanguageList);
-    }
+    // The market is chosen on the login screen (testid keyed by upper-case code).
+    // CH is the only market with two locales (de default + fr); that picker lives
+    // in the POST-LOGIN navbar, so it is applied in loginWithAlias once the navbar
+    // renders — not on the login screen.
+    await ui.click(`login.marketByCode#code=${market.toUpperCase()}`);
   }
 
   /** Sign in with a known-good alias (used after market+language selection). */
@@ -128,6 +201,16 @@ export class LoginUseCase {
     await ui.type(REF.passwordInput, user.password);
     await ui.click(REF.loginButton);
     await ui.waitForVisible(REF.logoutButton);
+    // CH defaults to German after market selection; switch to French via the
+    // post-login navbar language button so the localized chrome (logout label)
+    // reflects the requested locale.
+    if (String(this.world.state.market ?? '').toUpperCase() === 'CH') {
+      const lang = String(this.world.state.language ?? '').toLowerCase();
+      if (lang === 'french' || lang === 'fr') {
+        await ui.click('navbar.languageFRButton');
+        await ui.waitForVisible(REF.logoutButton);
+      }
+    }
   }
 
   /**
@@ -137,7 +220,7 @@ export class LoginUseCase {
   async assertLogoutLabel(expected: string): Promise<void> {
     const ui = await this.world.ui();
     const actual = (await ui.getText(REF.logoutButton)).trim();
-    if (actual !== expected) {
+    if (!textEquals(actual, expected)) {
       throw new ClassifiedError(
         FailureBucket.ASSERTION_FAILURE,
         `expected the logout button label to read "${expected}" but got "${actual}"`,

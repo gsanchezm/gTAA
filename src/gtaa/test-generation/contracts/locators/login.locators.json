@@ -24,6 +24,10 @@
       "ios": "-ios class chain:**/XCUIElementTypeOther[`name BEGINSWITH 'btn-market-'`]"
     }
   },
+  "marketByCode": {
+    "web": "[data-testid='market-{code}']",
+    "mobile": "~btn-market-{code}"
+  },
   "switzerlandLanguageList": {
     "web": "[data-testid^='lang-']",
     "mobile": {

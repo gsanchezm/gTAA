@@ -18,6 +18,11 @@
  * JVM/CLI dependency is confined to {@link runGatlingCli} so that
  * {@link buildSummary} and the parser can be exercised without Gatling.
  */
+// Load .env in THIS (parent) process so appConfig() resolves the real
+// API_BASE_URL. Without it the parent injects the localhost default into the
+// child env, which then shadows the child's own `-r dotenv/config` (dotenv
+// never overrides an already-set var).
+import 'dotenv/config';
 import { spawn } from 'node:child_process';
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -34,7 +39,11 @@ import {
   resolveInjection,
   type LoadProfile,
 } from '../../configuration/tools/gatling.config';
-import { parseStatsFromReportDir, type ParsedStats } from './stats-parser';
+import {
+  parseStatsFromConsole,
+  parseStatsFromReportDir,
+  type ParsedStats,
+} from './stats-parser';
 
 /** Repo root, resolved relative to this file's location. */
 const REPO_ROOT = resolve(__dirname, '..', '..', '..', '..');
@@ -59,6 +68,8 @@ export interface RunSimulationOptions {
 export interface CliRunResult {
   exitCode: number;
   reportDir: string;
+  /** Captured CLI stdout+stderr (carries the "Global Information" summary). */
+  output: string;
 }
 
 /** Returns the most recently created report directory under target/gatling. */
@@ -97,12 +108,27 @@ export function runGatlingCli(
     const child = spawn(process.execPath, args, {
       env,
       cwd: REPO_ROOT,
-      stdio: 'inherit',
+      // Capture stdout/stderr so we can parse Gatling's console summary, while
+      // still streaming it to the parent so live progress stays visible. stdin
+      // is inherited (the CLI is non-interactive here).
+      stdio: ['inherit', 'pipe', 'pipe'],
+    });
+
+    let output = '';
+    child.stdout?.on('data', (chunk: Buffer) => {
+      const text = chunk.toString();
+      output += text;
+      process.stdout.write(text);
+    });
+    child.stderr?.on('data', (chunk: Buffer) => {
+      const text = chunk.toString();
+      output += text;
+      process.stderr.write(text);
     });
 
     child.on('error', reject);
     child.on('close', (code) => {
-      resolvePromise({ exitCode: code ?? 1, reportDir: latestReportDir() });
+      resolvePromise({ exitCode: code ?? 1, reportDir: latestReportDir(), output });
     });
   });
 }
@@ -213,8 +239,12 @@ export async function runSimulation(options: RunSimulationOptions): Promise<Gatl
 
   let summary: GatlingSummary;
   try {
-    const { exitCode, reportDir } = await runGatlingCli(options, childEnv);
-    const stats = parseStatsFromReportDir(reportDir);
+    const { exitCode, reportDir, output } = await runGatlingCli(options, childEnv);
+    // Prefer the CLI's console "Global Information" block — the @gatling.io JS
+    // bundle (Gatling 3.14) does not emit js/stats.json. Fall back to a
+    // stats.json reader when present (e.g. a JVM Gatling report) so the parser
+    // stays tolerant across tool versions.
+    const stats = parseStatsFromConsole(output) ?? parseStatsFromReportDir(reportDir);
     const threshold = classifyThreshold(stats, exitCode, {
       p95Ms: p95ThresholdMs(),
       maxKoRate: maxKoRate(),

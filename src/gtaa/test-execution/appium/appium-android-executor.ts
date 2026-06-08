@@ -36,6 +36,12 @@ export class AppiumAndroidExecutor extends AppiumExecutorBase {
     if (android.appPath) {
       caps['appium:app'] = android.appPath;
     }
+    // NOTE: we intentionally do NOT set appium:unlockType. On this foldable
+    // Samsung it forces a per-session unlock that fails ("The device has failed
+    // to be unlocked"); the device is run with NO screen lock instead.
+    // Grant runtime permissions automatically so first-launch prompts don't
+    // block interaction.
+    caps['appium:autoGrantPermissions'] = true;
 
     return caps;
   }

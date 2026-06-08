@@ -12,7 +12,8 @@
     "mobile": "~text-header-brand"
   },
   "navLogo": {
-    "web": "[data-testid='nav-logo']"
+    "web": "[data-testid='nav-logo']",
+    "mobile": "~img-header-logo"
   },
   "navCatalogLink": {
     "web": "[data-testid='nav-catalog']"
@@ -21,10 +22,15 @@
     "web": "[data-testid='nav-checkout']"
   },
   "navCartCount": {
-    "web": "[data-testid='nav-cart-count']"
+    "web": "[data-testid='nav-cart-count']",
+    "mobile": "~text-nav-badge-checkout"
   },
   "navProfileLink": {
     "web": "[data-testid='nav-profile']"
+  },
+  "navLogoutLink": {
+    "web": "[data-testid='nav-logout']",
+    "mobile": "~nav-logout"
   },
   "navbarTitleText": {
     "mobile": "~text-navbar-title"
