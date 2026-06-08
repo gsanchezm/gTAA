@@ -21,7 +21,8 @@
     "web": "[data-testid='nav-checkout']"
   },
   "navCartCount": {
-    "web": "[data-testid='nav-cart-count']"
+    "web": "[data-testid='nav-cart-count']",
+    "mobile": "~text-nav-badge-checkout"
   },
   "navProfileLink": {
     "web": "[data-testid='nav-profile']"

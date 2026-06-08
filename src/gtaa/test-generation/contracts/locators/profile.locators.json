@@ -47,7 +47,8 @@
     "web": {
       "responsive": "[data-testid='profile-address-responsive']",
       "desktop": "[data-testid='profile-address-desktop']"
-    }
+    },
+    "mobile": "~input-profile-address"
   },
   "notesLabel": {
     "mobile": "~label-profile-notes"
