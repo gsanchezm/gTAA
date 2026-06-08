@@ -90,6 +90,11 @@ export class PizzaBuilderUseCase {
     d.language = language;
     d.size = undefined;
     d.toppings = [];
+    // Mirror the market/language onto world.state (as the other usecases do) so
+    // the visual oracle buckets per locale — without this the CH/de and CH/fr
+    // builder scenarios share a name ("...in CH") and collide on one baseline.
+    this.world.state.market = market;
+    this.world.state.language = language;
 
     if (this.world.context.driver === 'api') {
       // Resolve the pizza via the catalog listing (name -> id) for this market.
