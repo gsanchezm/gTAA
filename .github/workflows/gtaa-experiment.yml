@@ -426,11 +426,14 @@ jobs:
 
       # A bare `appium` server resolves drivers from APPIUM_HOME (empty in CI);
       # the npm devDependency does NOT register the driver. Install it explicitly.
-      # Pin the driver version (matches the lockfile) so all batch runs are
-      # reproducible, and fall back to `update` so a pre-seeded APPIUM_HOME
-      # (self-hosted runners) doesn't red the job on "already installed".
+      # Install the pinned driver ONLY if APPIUM_HOME doesn't already have it.
+      # A bare `install` on a pre-seeded home errors "already installed" (exit 1),
+      # and forcing `update` can pull an incompatible latest that fails to build —
+      # so check first and reuse the pre-seeded driver when present.
       - name: Install Appium UiAutomator2 driver
-        run: pnpm exec appium driver install uiautomator2@7.5.2 || pnpm exec appium driver update uiautomator2
+        run: |
+          pnpm exec appium driver list --installed 2>&1 | grep -qi 'uiautomator2' \
+            || pnpm exec appium driver install uiautomator2@7.5.2
         shell: bash
 
       - name: Download OmniPizza Android APK
@@ -588,10 +591,13 @@ jobs:
           echo "IOS_DEVICE_NAME=$IOS_NAME" >> "$GITHUB_ENV"
         shell: bash
 
-      # Pin the driver version (matches the lockfile) for batch reproducibility;
-      # fall back to `update` if a pre-seeded APPIUM_HOME already has it.
+      # Install ONLY if missing — the macOS runner image pre-seeds xcuitest, and
+      # forcing an update there pulls an incompatible latest that fails to build.
+      # Reuse the pre-seeded driver when present; pin on a fresh home.
       - name: Install Appium XCUITest driver
-        run: pnpm exec appium driver install xcuitest@11.7.3 || pnpm exec appium driver update xcuitest
+        run: |
+          pnpm exec appium driver list --installed 2>&1 | grep -qi 'xcuitest' \
+            || pnpm exec appium driver install xcuitest@11.7.3
         shell: bash
 
       - name: Start Appium server
