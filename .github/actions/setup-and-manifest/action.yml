@@ -19,10 +19,6 @@ inputs:
     description: "Node.js version to install."
     required: false
     default: "22"
-  pnpm-version:
-    description: "pnpm version to install."
-    required: false
-    default: "9"
   install-args:
     description: "Extra args passed to pnpm install."
     required: false
@@ -31,10 +27,13 @@ inputs:
 runs:
   using: "composite"
   steps:
+    # No `version:` input — pnpm/action-setup@v4 reads the version from
+    # package.json's `packageManager` field (pnpm@11.1.1). Passing BOTH a
+    # `version` and `packageManager` errors with ERR_PNPM_BAD_PM_VERSION
+    # ("Multiple versions of pnpm specified"), which left pnpm uninstalled
+    # (exit 127) and failed every job's "Setup + manifest" step.
     - name: Install pnpm
       uses: pnpm/action-setup@v4
-      with:
-        version: ${{ inputs.pnpm-version }}
 
     - name: Setup Node.js
       uses: actions/setup-node@v4
