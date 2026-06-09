@@ -49,4 +49,12 @@ export interface UiDriver {
    * on web the form fits the viewport so this is effectively a no-op.
    */
   scrollTo(ref: string): Promise<void>;
+
+  /**
+   * Dismiss a native OS dialog if one is showing (best-effort). OmniPizza pops a
+   * native "Profile saved" AlertDialog after a save on Android; left open it
+   * overlays the form so its inputs read as not-displayed. No-op on web (no native
+   * dialogs in these flows) and whenever no dialog is present.
+   */
+  dismissNativeDialog(): Promise<void>;
 }

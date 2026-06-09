@@ -253,6 +253,12 @@ export class ProfileUseCase {
     }
     const ui = await this.world.ui();
     await ui.click(REF.saveButton);
+    if (!isWebPlatform(this.world)) {
+      // OmniPizza pops a native "Profile saved" AlertDialog on save (Android).
+      // Left open it overlays the form, so the post-save inputs-visible assertion
+      // reads every field as not-displayed. Dismiss it before continuing.
+      await ui.dismissNativeDialog();
+    }
     this.world.state.profileSaved = true;
   }
 

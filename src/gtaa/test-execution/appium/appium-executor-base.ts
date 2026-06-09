@@ -32,6 +32,7 @@ import {
   waitForDisplayed,
   captureElement,
   scrollIntoView,
+  dismissNativeAlert,
 } from '../../test-adaptation/drivers/appium/mobile-actions';
 
 /** webdriverio remote() options shape (kept local; tsconfig has types: ["node"]). */
@@ -295,6 +296,17 @@ export abstract class AppiumExecutorBase implements UiDriver {
   /** Scroll a below-the-fold element into view (UiScrollable on Android). */
   async scrollTo(ref: string): Promise<void> {
     await scrollIntoView(this.requireSession(), this.selectorFor(ref), this.platformKind);
+  }
+
+  /**
+   * Dismiss the native "Profile saved" AlertDialog OmniPizza pops after a save.
+   * Android-only: the `android:id/button1` selector is invalid on iOS (it crashes
+   * the plugin session), so it is gated on the android platform; best-effort and
+   * never throws so a missing dialog cannot fail the flow.
+   */
+  async dismissNativeDialog(): Promise<void> {
+    if (this.platformKind !== 'android') return;
+    await dismissNativeAlert(this.requireSession());
   }
 
   // ---- helpers -------------------------------------------------------------
