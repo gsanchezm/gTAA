@@ -70,20 +70,11 @@ export class CheckoutUseCase {
   /** "they are ordering in market {string}". */
   async setMarket(market: string): Promise<void> {
     this.draft().market = market;
-    if (this.world.context.driver === 'api') {
-      return; // Market is sent on the place-order call.
-    }
-    if (isWebPlatform(this.world)) {
-      // Web: record only. The checkout page is opened in provideDelivery, AFTER
-      // the cart is populated (addToOrder) and the session seeded — navigating
-      // to /checkout with an empty cart bounces back to the catalog.
-      return;
-    }
-    // Native mobile: open the checkout screen (the executor maps the route to a
-    // bottom-nav tap); the cart was hydrated on the device.
-    const ui = await this.world.ui();
-    await ui.navigate(`/checkout?market=${encodeURIComponent(market)}`);
-    await ui.waitForVisible(REF.checkoutHeader);
+    // Record only — web and native mobile alike. Opening checkout here would hit
+    // an EMPTY cart (it bounces to the catalog / shows the empty-cart state). The
+    // cart is populated in addToOrder; the screen is opened in provideDelivery
+    // (web seeds + navigates, mobile deep-links with hydrateCart) — mirroring the
+    // order the place-delivery-order feature drives the steps.
   }
 
   /**
@@ -103,12 +94,11 @@ export class CheckoutUseCase {
     if (this.world.context.driver === 'api') {
       return; // The api path submits the order line directly in assertOrderAccepted.
     }
-    if (!isWebPlatform(this.world)) {
-      return; // Native mobile records the line only; the device hydrates its cart.
-    }
-    // Web: populate the cart via the API so /checkout has a line to order (faster
-    // and less flaky than UI cart manipulation; mirrors the reference). Resolve
-    // the display name to the catalog id the cart endpoint keys by.
+    // Web AND native mobile: populate the cart via the API so checkout has a line
+    // to order (faster and less flaky than UI cart manipulation; mirrors the
+    // reference). The mobile checkout deep link re-fetches this same cart via
+    // hydrateCart=true. Resolve the display name to the catalog id the cart
+    // endpoint keys by.
     const token = String(this.world.state.token ?? '');
     const market = String(d.market ?? '');
     const pizzaId = (await resolvePizzaId(item, { token, market })) ?? item;
@@ -136,11 +126,19 @@ export class CheckoutUseCase {
     const ui = await this.world.ui();
 
     if (!isWebPlatform(this.world)) {
-      // Native mobile: the checkout screen is already open (setMarket tapped to
-      // it); fill the form fields the device renders.
+      // Native mobile: open checkout via a deep link so the screen hydrates the
+      // (API-populated) cart and renders the form — a bottom-nav tap would land on
+      // the empty-cart branch. Then fill the fields, market-aware like web.
+      const mmarket = String(d.market ?? '').toUpperCase();
+      await ui.navigate(`/checkout?market=${encodeURIComponent(mmarket)}&hydrateCart=true`);
+      await ui.waitForVisible(REF.checkoutHeader);
       await ui.type(REF.streetInput, street);
-      if (zip) {
-        await ui.type(REF.zipCodeInput, zip);
+      const zipSlot = mmarket === 'JP' ? suburb || zip : zip;
+      if (zipSlot) {
+        await ui.type(REF.zipCodeInput, zipSlot);
+      }
+      if (mmarket === 'MX' && suburb) {
+        await ui.type(REF.coloniaInput, suburb);
       }
       await ui.type(REF.fullNameInput, name);
       await ui.type(REF.phoneNumberInput, phone);
@@ -196,11 +194,11 @@ export class CheckoutUseCase {
       return; // Card details are not part of the place-order assertion contract.
     }
     const ui = await this.world.ui();
-    // WEB: the card form requires the cardholder name; fill it from the delivery
-    // name (mirrors the reference) before the card fields, otherwise place-order
-    // validation blocks and the success screen never renders. (Native mobile
-    // keeps its prior card-only fill.)
-    if (isWebPlatform(this.world) && d.name) {
+    // The card form requires the cardholder name on both web and native mobile;
+    // fill it from the delivery name (mirrors the reference) before the card
+    // fields, otherwise place-order validation blocks and the success screen
+    // never renders.
+    if (d.name) {
       await ui.type(REF.cardHolderNameInput, d.name);
     }
     await ui.type(REF.cardNumberInput, card);

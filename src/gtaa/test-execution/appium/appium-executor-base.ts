@@ -164,11 +164,16 @@ export abstract class AppiumExecutorBase implements UiDriver {
       profile: 'nav-profile',
     };
     const target = navTestId[section];
-    if (!target) {
-      // Routes with no bottom-nav tab (e.g. order-success) are reached via a full
-      // deep link carrying their params (orderId/market/lang) — the AUT and TOM
-      // enter them this way; a tab tap cannot. With no query there is nothing to
-      // route to, so it stays a no-op (e.g. `/login`, `/`).
+    // Some params are applied ONLY by the AUT's deep-link handler: `hydrateCart`
+    // makes checkout re-fetch the cart from the API, `orderId` hydrates the order.
+    // A bottom-nav tap can't carry those, so any route bearing them is reached via
+    // a full deep link instead (e.g. checkout with a populated cart).
+    const needsDeepLink = /(?:^|&)(hydrateCart|orderId)=/.test(query);
+    if (!target || needsDeepLink) {
+      // Routes with no bottom-nav tab (e.g. order-success) — and tab routes that
+      // need deep-link-only params — are reached via a full deep link carrying
+      // their query (orderId/market/lang/hydrateCart). With no query there is
+      // nothing to route to, so it stays a no-op (e.g. `/login`, `/`).
       if (section && query) {
         await this.deepLink(`omnipizza://${section}?${query}`);
       }
