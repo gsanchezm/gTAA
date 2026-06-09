@@ -263,6 +263,30 @@ async function swipeUntilDisplayed(
 }
 
 /**
+ * Best-effort dismissal of the native Android "Profile saved" AlertDialog
+ * (OK button = `android:id/button1`) that OmniPizza pops after a successful save.
+ * Left open it overlays the form so the inputs read as not-displayed. The dialog
+ * can appear a beat after the save PATCH resolves, so poll briefly: each miss
+ * throws no-such-element and we retry until it shows or we give up. Never throws.
+ *
+ * NOTE: `android:id/button1` is an Android UiSelector — an INVALID locator
+ * strategy on iOS that crashes the plugin session — so callers MUST gate this on
+ * the Android platform.
+ */
+export async function dismissNativeAlert(session: MobileSession): Promise<void> {
+  const okButton = 'android=new UiSelector().resourceId("android:id/button1")';
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    try {
+      const el = await session.$(okButton);
+      await el.click();
+      return;
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    }
+  }
+}
+
+/**
  * Guarded keyboard dismissal. Checks isKeyboardShown when available and calls
  * hideKeyboard, swallowing any error: the keyboard API is platform/state
  * dependent and must never fail an interaction.

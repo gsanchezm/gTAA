@@ -42,6 +42,11 @@ export class AppiumAndroidExecutor extends AppiumExecutorBase {
     // Grant runtime permissions automatically so first-launch prompts don't
     // block interaction.
     caps['appium:autoGrantPermissions'] = true;
+    // The AUT talks to a free-tier backend that cold-starts; a login/API call can
+    // pause the node side >60s between Appium commands. Raise the server's idle
+    // session timeout (default 60s) so a cold start doesn't kill the session
+    // mid-scenario ("New Command Timeout ... expired").
+    caps['appium:newCommandTimeout'] = 180;
 
     return caps;
   }

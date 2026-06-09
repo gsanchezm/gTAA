@@ -104,11 +104,21 @@ export class LoginUseCase {
     if (isWebPlatform(this.world)) {
       await ui.evaluate(CLEAR_LOGIN_INPUTS_JS);
       await ui.evaluate(`(() => { window.${LOGIN_SENTINEL} = '1'; return 'ok'; })()`);
-    }
-    if (username) {
+      // Web cleared via JS above, so only type the non-empty values.
+      if (username) {
+        await ui.type(REF.usernameInput, username);
+      }
+      if (password) {
+        await ui.type(REF.passwordInput, password);
+      }
+    } else {
+      // Native mobile: the OmniPizza login form PRE-FILLS standard_user/pizza123
+      // and there is no JS clear path. Type BOTH fields unconditionally — safeType
+      // clears the pre-filled value before setting, so an empty scenario value
+      // truly submits an empty field. Otherwise the empty-field cases would submit
+      // the pre-filled VALID creds and log in (no error banner). The AUT's
+      // handleLogin sets "Invalid credentials" whenever either field is empty.
       await ui.type(REF.usernameInput, username);
-    }
-    if (password) {
       await ui.type(REF.passwordInput, password);
     }
     await ui.click(REF.loginButton);

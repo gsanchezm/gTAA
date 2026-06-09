@@ -185,6 +185,11 @@ export class PlaywrightWebExecutor implements UiDriver {
     await locator.scrollIntoViewIfNeeded({ timeout: webConfig().timeoutMs }).catch(() => undefined);
   }
 
+  /** No native OS dialogs in the web flows — nothing to dismiss. */
+  async dismissNativeDialog(): Promise<void> {
+    // Intentionally a no-op on web; the native "Profile saved" alert is mobile-only.
+  }
+
   // ---------------------------------------------------------------------------
   // Visual capture (consumed by the visual executor through UiDriver methods
   // ONLY — no Playwright types cross this boundary).

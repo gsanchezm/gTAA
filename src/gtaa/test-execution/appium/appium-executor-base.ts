@@ -32,6 +32,7 @@ import {
   waitForDisplayed,
   captureElement,
   scrollIntoView,
+  dismissNativeAlert,
 } from '../../test-adaptation/drivers/appium/mobile-actions';
 
 /** webdriverio remote() options shape (kept local; tsconfig has types: ["node"]). */
@@ -50,6 +51,19 @@ const TRANSIENT_SESSION_REGEX =
 function isTransientSessionError(error: unknown): boolean {
   const msg = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
   return TRANSIENT_SESSION_REGEX.test(msg);
+}
+
+/**
+ * AUT application id. The OmniPizza APK registers the `omnipizza://` scheme on
+ * this package's MainActivity; deep links are targeted at it to apply a CH
+ * language override the bottom-nav tap cannot carry.
+ */
+const AUT_ANDROID_PACKAGE = 'com.omnipizza.app';
+
+/** Extract the `lang` query-param value from a URL query string ('' if absent). */
+function langParamOf(query: string): string {
+  const m = query.match(/(?:^|&)lang=([^&]*)/);
+  return m ? decodeURIComponent(m[1]) : '';
 }
 
 export abstract class AppiumExecutorBase implements UiDriver {
@@ -142,19 +156,72 @@ export abstract class AppiumExecutorBase implements UiDriver {
    * own flow) are a no-op.
    */
   async navigate(url: string): Promise<void> {
-    const section = url.split('?')[0].replace(/^\/+/, '').split('/')[0];
+    const [path, query = ''] = url.split('?');
+    const section = path.replace(/^\/+/, '').split('/')[0];
     const navTestId: Record<string, string> = {
       catalog: 'nav-catalog',
       checkout: 'nav-checkout',
       profile: 'nav-profile',
     };
     const target = navTestId[section];
-    if (!target) return;
+    // Some params are applied ONLY by the AUT's deep-link handler: `hydrateCart`
+    // makes checkout re-fetch the cart from the API, `orderId` hydrates the order.
+    // A bottom-nav tap can't carry those, so any route bearing them is reached via
+    // a full deep link instead (e.g. checkout with a populated cart).
+    const needsDeepLink = /(?:^|&)(hydrateCart|orderId)=/.test(query);
+    if (!target || needsDeepLink) {
+      // Routes with no bottom-nav tab (e.g. order-success) — and tab routes that
+      // need deep-link-only params — are reached via a full deep link carrying
+      // their query (orderId/market/lang/hydrateCart). With no query there is
+      // nothing to route to, so it stays a no-op (e.g. `/login`, `/`).
+      if (section && query) {
+        await this.deepLink(`omnipizza://${section}?${query}`);
+      }
+      return;
+    }
     try {
       await safeTap(this.requireSession(), `~${target}`, this.platformKind, this.timeoutMs);
     } catch {
       // Best-effort: the app may already be on the target section.
     }
+    // A bottom-nav tap cannot carry the `?lang=` the web path uses to switch the
+    // CH market between German and French. The AUT applies a `lang` override only
+    // through its deep-link handler (and the store guards it to CH), so deliver an
+    // `omnipizza://<route>?lang=<lang>` deep link for de/fr. Other languages ride
+    // along with the market the login already selected (and the AUT handler
+    // ignores them), so en/es/ja are skipped — leaving the market path untouched.
+    const lang = langParamOf(query);
+    if (lang === 'fr' || lang === 'de') {
+      await this.applyMobileLanguage(section, lang);
+    }
+  }
+
+  /**
+   * Deliver a deep link to the running app via UiAutomator2's `mobile: deepLink`
+   * (Android only — the command takes a `package`). The AUT picks it up warmly
+   * (onNewIntent) so the logged-in session is preserved. Best-effort: a deep link
+   * is an enhancement over the tab tap, so a failure must never break navigation.
+   */
+  protected async deepLink(url: string): Promise<void> {
+    if (this.platformKind !== 'android') return;
+    try {
+      await this.requireSession().execute('mobile: deepLink', {
+        url,
+        package: AUT_ANDROID_PACKAGE,
+      });
+    } catch {
+      // Best-effort: never fail navigation on a deep link.
+    }
+  }
+
+  /**
+   * Apply a CH language override (de/fr) that the bottom-nav tap cannot carry, by
+   * delivering an `omnipizza://<route>?lang=<lang>` deep link. The AUT's handler
+   * calls the store's CH-guarded setLanguage, so the screen re-renders in the
+   * chosen language without losing the logged-in session.
+   */
+  protected async applyMobileLanguage(route: string, lang: string): Promise<void> {
+    await this.deepLink(`omnipizza://${route}?lang=${encodeURIComponent(lang)}`);
   }
 
   // ---- UiDriver interactions (delegated to shared defensive helpers) ------
@@ -248,6 +315,17 @@ export abstract class AppiumExecutorBase implements UiDriver {
   /** Scroll a below-the-fold element into view (UiScrollable on Android). */
   async scrollTo(ref: string): Promise<void> {
     await scrollIntoView(this.requireSession(), this.selectorFor(ref), this.platformKind);
+  }
+
+  /**
+   * Dismiss the native "Profile saved" AlertDialog OmniPizza pops after a save.
+   * Android-only: the `android:id/button1` selector is invalid on iOS (it crashes
+   * the plugin session), so it is gated on the android platform; best-effort and
+   * never throws so a missing dialog cannot fail the flow.
+   */
+  async dismissNativeDialog(): Promise<void> {
+    if (this.platformKind !== 'android') return;
+    await dismissNativeAlert(this.requireSession());
   }
 
   // ---- helpers -------------------------------------------------------------
