@@ -163,7 +163,16 @@ export class NavbarUseCase {
       // design); the localized add label ("Ajouter"/"Hinzufügen") lives on the
       // customizer modal's confirm CTA. Open the modal on the first card, read
       // its label, then close it — the web-equivalent of the native card label.
-      const pizzaId = (await ui.evaluate(FIRST_CARD_ID_JS)).trim();
+      // A header language switch re-renders/refetches the catalog, so the cards
+      // can briefly be absent right after the click. Poll the exact add-to-cart
+      // read (bounded) so we wait out the re-render instead of failing the race;
+      // when cards are already present the first read returns immediately.
+      let pizzaId = (await ui.evaluate(FIRST_CARD_ID_JS)).trim();
+      const cardDeadline = Date.now() + 10_000;
+      while (!pizzaId && Date.now() < cardDeadline) {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        pizzaId = (await ui.evaluate(FIRST_CARD_ID_JS)).trim();
+      }
       if (!pizzaId) {
         throw new ClassifiedError(
           FailureBucket.ASSERTION_FAILURE,

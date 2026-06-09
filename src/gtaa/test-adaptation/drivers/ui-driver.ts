@@ -57,4 +57,11 @@ export interface UiDriver {
    * dialogs in these flows) and whenever no dialog is present.
    */
   dismissNativeDialog(): Promise<void>;
+
+  /**
+   * Optional: dump the native UI hierarchy (Appium getPageSource) for on-failure
+   * diagnostics. Implemented by the mobile executors; web executors omit it (the
+   * failure screenshot plus the page DOM are enough there).
+   */
+  dumpPageSource?(): Promise<string>;
 }

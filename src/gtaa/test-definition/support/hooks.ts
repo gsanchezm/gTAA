@@ -21,6 +21,8 @@ import { runIdentity } from '../../test-reporting/telemetry/run-context';
 import { emitToolEvent, writeRunManifest } from '../../test-reporting/telemetry/telemetry-writer';
 import { classifyError, errorMessage, FailureBucket } from '../../shared/failure-buckets';
 import type { ExecutionStatus, TelemetryEvent } from '../../shared/types';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 BeforeAll(function () {
   try {
@@ -86,8 +88,47 @@ After(async function (this: GtaaWorld, scenario: ITestCaseHookParameter) {
   };
   safeEmit(event);
 
+  // On failure, capture a screenshot + native UI hierarchy BEFORE teardown (the
+  // session is still alive here) so a red CI run is debuggable from the uploaded
+  // results/** artifact. Fully guarded — diagnostics must never break a run.
+  if (failed && this.hasDriver()) {
+    await captureFailureDiagnostics(this, scenario.pickle.name).catch(() => undefined);
+  }
+
   await this.disposeDriver().catch(() => undefined);
 });
+
+/**
+ * Best-effort on-failure capture: a page/screen PNG and (mobile) the native UI
+ * source, written under results/diagnostics/ which every job already uploads.
+ * Every step is wrapped so a capture failure never affects the scenario outcome.
+ */
+async function captureFailureDiagnostics(
+  world: GtaaWorld,
+  scenarioName: string,
+): Promise<void> {
+  try {
+    const ui = await world.ui();
+    const dir = join(process.cwd(), 'results', 'diagnostics');
+    mkdirSync(dir, { recursive: true });
+    const safe = (scenarioName || 'scenario').replace(/[^a-z0-9]+/gi, '-').slice(0, 80);
+    const base = join(dir, `${world.context.platform}-${safe}-${world.runId}`);
+    try {
+      const png = await ui.capturePage();
+      writeFileSync(`${base}.png`, png);
+    } catch {
+      /* screenshot best-effort */
+    }
+    try {
+      const src = ui.dumpPageSource ? await ui.dumpPageSource() : '';
+      if (src) writeFileSync(`${base}.xml`, src, 'utf8');
+    } catch {
+      /* page source best-effort */
+    }
+  } catch {
+    /* diagnostics must never break teardown */
+  }
+}
 
 function mapStatus(status?: (typeof Status)[keyof typeof Status]): ExecutionStatus {
   switch (status) {

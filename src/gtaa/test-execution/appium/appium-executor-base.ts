@@ -152,6 +152,20 @@ export abstract class AppiumExecutorBase implements UiDriver {
   }
 
   /**
+   * On-failure diagnostic: dump the native UI hierarchy (Appium getPageSource).
+   * Best-effort — returns '' if the session is gone or the command fails, so it
+   * can never break teardown.
+   */
+  async dumpPageSource(): Promise<string> {
+    try {
+      const src = await this.session?.getPageSource?.();
+      return src ?? '';
+    } catch {
+      return '';
+    }
+  }
+
+  /**
    * Mobile has no URL routing — map the known app routes to a bottom-nav tap so
    * a use case that "navigates" to a section reaches it the way a user would.
    * `catalog` is the post-login default; `profile`/`checkout` are bottom-nav

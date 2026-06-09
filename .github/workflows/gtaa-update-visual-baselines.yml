@@ -50,6 +50,16 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps || pnpm exec playwright install || true
 
+      # The visual executor writes a baseline ONLY when one does not already
+      # exist (create-only; it never overwrites, even in update mode). Delete the
+      # tree first so UPDATE_VISUAL_BASELINE=true actually RE-creates every
+      # snapshot — otherwise the regen is a silent no-op and stale baselines
+      # persist. (Every @visual scenario must reach its capture for this to be a
+      # complete set; flaky scenarios would leave a baseline missing.)
+      - name: Clear existing baselines (force full re-create)
+        run: rm -rf visual-baselines && echo "cleared visual-baselines for a full regen"
+        shell: bash
+
       # With UPDATE_VISUAL_BASELINE=true these runs write new baselines. The
       # capture renders the LIVE app, so the AUT must be injected here too —
       # without it the run would hit localhost and produce useless baselines.
