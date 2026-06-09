@@ -52,6 +52,19 @@ function isTransientSessionError(error: unknown): boolean {
   return TRANSIENT_SESSION_REGEX.test(msg);
 }
 
+/**
+ * AUT application id. The OmniPizza APK registers the `omnipizza://` scheme on
+ * this package's MainActivity; deep links are targeted at it to apply a CH
+ * language override the bottom-nav tap cannot carry.
+ */
+const AUT_ANDROID_PACKAGE = 'com.omnipizza.app';
+
+/** Extract the `lang` query-param value from a URL query string ('' if absent). */
+function langParamOf(query: string): string {
+  const m = query.match(/(?:^|&)lang=([^&]*)/);
+  return m ? decodeURIComponent(m[1]) : '';
+}
+
 export abstract class AppiumExecutorBase implements UiDriver {
   /** Public, neutral platform tag required by the UiDriver contract. */
   readonly platform: string;
@@ -142,18 +155,52 @@ export abstract class AppiumExecutorBase implements UiDriver {
    * own flow) are a no-op.
    */
   async navigate(url: string): Promise<void> {
-    const section = url.split('?')[0].replace(/^\/+/, '').split('/')[0];
+    const [path, query = ''] = url.split('?');
+    const section = path.replace(/^\/+/, '').split('/')[0];
     const navTestId: Record<string, string> = {
       catalog: 'nav-catalog',
       checkout: 'nav-checkout',
       profile: 'nav-profile',
     };
     const target = navTestId[section];
-    if (!target) return;
+    if (target) {
+      try {
+        await safeTap(this.requireSession(), `~${target}`, this.platformKind, this.timeoutMs);
+      } catch {
+        // Best-effort: the app may already be on the target section.
+      }
+    }
+    // A bottom-nav tap cannot carry the `?lang=` the web path uses to switch the
+    // CH market between German and French. The AUT applies a `lang` override only
+    // through its deep-link handler (and the store guards it to CH), so deliver an
+    // `omnipizza://<route>?lang=<lang>` deep link for de/fr. Other languages ride
+    // along with the market the login already selected (and the AUT handler
+    // ignores them), so en/es/ja are skipped — leaving the market path untouched.
+    const lang = langParamOf(query);
+    if (lang === 'fr' || lang === 'de') {
+      await this.applyMobileLanguage(section || 'catalog', lang);
+    }
+  }
+
+  /**
+   * Apply a CH language override (de/fr) that the bottom-nav tap cannot carry, by
+   * delivering an `omnipizza://<route>?lang=<lang>` deep link to the running app.
+   * The AUT's deep-link handler calls the store's CH-guarded setLanguage, which
+   * the live session picks up warmly (onNewIntent), so the screen re-renders in
+   * the chosen language without losing the logged-in session. Android only (the
+   * deep-link command takes a `package`); best-effort — the override only matters
+   * for CH, so a failure here must never break navigation.
+   */
+  protected async applyMobileLanguage(route: string, lang: string): Promise<void> {
+    if (this.platformKind !== 'android') return;
+    const url = `omnipizza://${route}?lang=${encodeURIComponent(lang)}`;
     try {
-      await safeTap(this.requireSession(), `~${target}`, this.platformKind, this.timeoutMs);
+      await this.requireSession().execute('mobile: deepLink', {
+        url,
+        package: AUT_ANDROID_PACKAGE,
+      });
     } catch {
-      // Best-effort: the app may already be on the target section.
+      // Best-effort: never fail navigation on the language override.
     }
   }
 
