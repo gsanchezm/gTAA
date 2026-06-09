@@ -30,13 +30,18 @@ Feature: View and update the OmniPizza user profile across markets
     Given they are on the profile screen in market "<market>" using language "<language>"
     Then the form labels "<fullNameLabel>", "<phoneLabel>", "<addressLabel>", "<notesLabel>" are visible
 
+    # Labels are the app's exact rendered strings. Mobile renders the profile
+    # form labels UPPERCASED (RN `textTransform: uppercase`), so these are the
+    # i18n values upper-cased verbatim (e.g. es `Teléfono` → `TELÉFONO`,
+    # `Notas de Entrega` → `NOTAS DE ENTREGA`). ASSERT_TEXT is strict (`!==`);
+    # do NOT "title-case" these back — that breaks the @android/@ios run.
     Examples:
-      | market | language | fullNameLabel       | phoneLabel          | addressLabel | notesLabel |
-      | US     | en       | Full name           | Phone number        | Address      | Notes      |
-      | MX     | es       | Nombre              | Teléfono            | Dirección    | Notas      |
-      | CH     | de       | Vollständiger Name  | Telefonnummer       | Adresse      | Notizen    |
-      | CH     | fr       | Nom complet         | Numéro de téléphone | Adresse      | Notes      |
-      | JP     | ja       | フルネーム          | 電話番号            | 住所         | メモ       |
+      | market | language | fullNameLabel      | phoneLabel | addressLabel | notesLabel         |
+      | US     | en       | FULL NAME          | PHONE      | ADDRESS      | DELIVERY NOTES     |
+      | MX     | es       | NOMBRE COMPLETO    | TELÉFONO   | DIRECCIÓN    | NOTAS DE ENTREGA   |
+      | CH     | de       | VOLLSTÄNDIGER NAME | TELEFON    | ADRESSE      | LIEFERHINWEISE     |
+      | CH     | fr       | NOM COMPLET        | TÉLÉPHONE  | ADRESSE      | NOTES DE LIVRAISON |
+      | JP     | ja       | 氏名               | 電話番号   | 住所         | 配送メモ           |
 
   # OmniPizza is a non-persistent demo app: the profile screen re-syncs the form to
   # the backend's stored value on load (which races/overwrites a fresh fill), shows
