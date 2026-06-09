@@ -30,6 +30,7 @@
     "metrics:durations": "tsx scripts/metrics/aggregate-durations.ts",
     "metrics:api": "tsx scripts/metrics/normalize-api-telemetry.ts",
     "metrics:visual": "tsx scripts/metrics/normalize-visual-telemetry.ts",
+    "metrics:visual:gate": "tsx scripts/metrics/visual-gate.ts",
     "metrics:performance": "tsx scripts/metrics/normalize-gatling-telemetry.ts",
     "metrics:failures": "tsx scripts/metrics/build-failure-buckets.ts",
     "metrics:outcomes": "tsx scripts/metrics/build-outcome-history.ts",

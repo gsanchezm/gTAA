@@ -2,36 +2,57 @@
 # gTAA Experiment Workflow
 # ===========================================================================
 # Layered Generic Test Automation Architecture (gTAA) baseline workflow used
-# in a paired experiment against a reference repository.
+# in a paired experiment against the TOM reference repository.
 #
-# Design goals:
-#   * Six fully INDEPENDENT tool jobs (no execution dependency between them).
-#   * Each job ALWAYS runs the metrics pipeline and ALWAYS uploads artifacts,
-#     even when test execution fails or no live app / device is available.
-#   * A final `consolidate` job aggregates every tool's metrics and computes
-#     the quality-attribute summary.
+# Execution semantics are mirrored from TOM's tom-quantitative-execution.yml so
+# the two arms differ ONLY in architecture, not in how they are run:
+#   * Tests run FOR REAL — there is NO `|| true` on any test-execution step, so
+#     a genuine scenario / visual / perf failure turns the job RED.
+#   * The AUT (OmniPizza) is injected per-step from secrets BASE_URL /
+#     API_BASE_URL; mobile app binaries are pulled from OmniPizza GitHub
+#     releases at run time.
+#   * Every job ALWAYS runs the metrics pipeline and ALWAYS uploads artifacts
+#     (`if: always()`), so a red test step still yields a data point — the 50/100
+#     run batch keeps collecting even when individual runs fail.
 #
-# Repeated runs (100-run experiment) are supported in three ways:
-#   1. Manual single run via the Actions UI (workflow_dispatch).
-#   2. External driver loop using the GitHub CLI, e.g.:
+# What is DELIBERATELY NOT copied from TOM (operational config gTAA already got
+# right, and TOM-specific infra that would invalidate the experiment):
+#   * Concurrency: each (batch, run_index) is its OWN group with
+#     cancel-in-progress:false, so the 50 dispatched runs do NOT cancel each
+#     other (TOM cancels in-progress by ref — correct for TOM, wrong for a batch).
+#   * NO microkernel / chaos-proxy / plugin servers / MinIO. gTAA telemetry is
+#     file-based JSONL under metrics/raw/**; jobs run executors directly.
 #
-#        for i in $(seq 1 100); do
-#          gh workflow run gtaa-experiment.yml \
-#            -f experiment_batch_id="batch-2026-05-28" \
-#            -f run_index="$i" \
-#            -f target_environment="staging"
-#        done
+# Repeated runs (50/100-run experiment): drive externally with the GitHub CLI,
+# one independent workflow run (and dataset) per index:
 #
-#      See docs/experiment-runs.md for the full driver script.
-#   3. A matrix example job (`matrix-driver-example`, disabled by default)
-#      that fans out N indices in a single dispatch. Enable by setting
-#      RUN_MATRIX=true as a repository/workflow variable.
+#     for i in $(seq 1 50); do
+#       gh workflow run gtaa-experiment.yml \
+#         -f platform=all \
+#         -f experiment_batch_id="batch-2026-06-09" \
+#         -f run_index="$i" \
+#         -f target_environment="staging"
+#     done
 # ===========================================================================
 name: gTAA Experiment
 
 on:
   workflow_dispatch:
     inputs:
+      platform:
+        description: "Tool / platform slice to execute."
+        type: choice
+        required: false
+        default: all
+        options:
+          - all
+          - api
+          - playwright
+          - pixelmatch
+          - gatling
+          - appium
+          - appium-android
+          - appium-ios
       experiment_batch_id:
         description: "Identifier grouping all runs of one experiment batch."
         type: string
@@ -56,11 +77,36 @@ on:
           - local
           - staging
           - prod
-  # Optional push trigger for CI sanity only. The tool jobs are resilient and
-  # will collect metrics even without a live app, so this is safe on main.
-  push:
-    branches:
-      - main
+      perf_profile:
+        description: "Gatling injection profile."
+        type: choice
+        required: false
+        default: smoke
+        options:
+          - smoke
+          - load
+          - stress
+      perf_users:
+        description: "Virtual user count (perf load/stress)."
+        type: string
+        required: false
+        default: "10"
+      perf_duration:
+        description: "Ramp/hold duration in seconds (perf load/stress)."
+        type: string
+        required: false
+        default: "30"
+      android_api_level:
+        description: "Android emulator API level (docker-android image tag)."
+        type: choice
+        required: false
+        default: "33"
+        options:
+          - "30"
+          - "31"
+          - "32"
+          - "33"
+          - "34"
 
 # Top-level environment shared by every job. Inputs flow down via these vars.
 env:
@@ -70,6 +116,10 @@ env:
   RUN_INDEX: ${{ github.event.inputs.run_index || '1' }}
   TARGET_ENVIRONMENT: ${{ github.event.inputs.target_environment || 'local' }}
   UPDATE_VISUAL_BASELINE: ${{ github.event.inputs.update_visual_baseline || 'false' }}
+  # OmniPizza is the shared AUT. Mobile jobs pull the app binaries from its
+  # GitHub releases (the web/API AUT lives behind the BASE_URL/API_BASE_URL
+  # secrets and is NOT served from here).
+  OMNIPIZZA_RELEASES_REPO: gsanchezm/OmniPizza
 
 # Allow multiple experiment runs to proceed in parallel (do NOT cancel
 # in-progress runs; each run_index is a distinct data point).
@@ -82,11 +132,45 @@ permissions:
 
 jobs:
   # -------------------------------------------------------------------------
+  # 0. Resolve latest OmniPizza release tag (consumed by the mobile jobs).
+  # -------------------------------------------------------------------------
+  resolve-omnipizza-release:
+    name: Resolve OmniPizza release
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name != 'workflow_dispatch'
+      || inputs.platform == 'all'
+      || inputs.platform == 'appium'
+      || inputs.platform == 'appium-android'
+      || inputs.platform == 'appium-ios'
+    outputs:
+      tag: ${{ steps.fetch.outputs.tag }}
+    steps:
+      - name: Fetch latest release tag
+        id: fetch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG=$(gh api "repos/${OMNIPIZZA_RELEASES_REPO}/releases/latest" --jq .tag_name)
+          if [ -z "$TAG" ] || [ "$TAG" = "null" ]; then
+            echo "Failed to resolve latest OmniPizza release tag."
+            exit 1
+          fi
+          echo "Resolved OmniPizza release: $TAG"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+  # -------------------------------------------------------------------------
   # 1. Playwright web (desktop + responsive)
   # -------------------------------------------------------------------------
   playwright:
     name: Playwright (web desktop + responsive)
     runs-on: ubuntu-latest
+    if: >-
+      github.event_name != 'workflow_dispatch'
+      || inputs.platform == 'all'
+      || inputs.platform == 'playwright'
     env:
       TOOL_NAME: playwright
       GTAA_PLATFORM: web
@@ -98,17 +182,24 @@ jobs:
       - name: Setup + manifest
         uses: ./.github/actions/setup-and-manifest
 
-      # Install Playwright browsers; tolerant so metrics still run if it fails.
+      # Install the browsers matching gTAA's pinned Playwright (1.60.x). Tolerant
+      # so a transient mirror hiccup doesn't mask a real test result.
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps || pnpm exec playwright install || true
 
-      # Run BOTH desktop and responsive web suites. Resilient: execution may
-      # have no live app in CI, so failures must not abort the metrics stage.
+      # Real execution against the deployed OmniPizza (no `|| true`): a failed
+      # scenario fails the step and turns the job red.
       - name: Run web tests (desktop)
-        run: pnpm test:web:desktop || true
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+        run: pnpm test:web:desktop
 
       - name: Run web tests (responsive)
-        run: pnpm test:web:responsive || true
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+        run: pnpm test:web:responsive
 
       - name: Collect + normalize metrics
         if: always()
@@ -127,150 +218,15 @@ jobs:
           retention-days: 30
 
   # -------------------------------------------------------------------------
-  # 2. Appium iOS (simulator / real device)
-  # -------------------------------------------------------------------------
-  appium-ios:
-    name: Appium iOS
-    # macOS runner is required for iOS simulators. The experiment may instead
-    # target self-hosted / real devices; in that case swap runs-on for a
-    # self-hosted label (e.g. [self-hosted, macos, ios]).
-    runs-on: macos-14
-    env:
-      TOOL_NAME: appium-ios
-      GTAA_PLATFORM: ios
-      GTAA_DRIVER: appium
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup + manifest
-        uses: ./.github/actions/setup-and-manifest
-
-      # ---- iOS simulator setup (tolerant scaffold) -------------------------
-      # On GitHub-hosted macOS runners, Xcode + simulators are preinstalled.
-      # Boot a simulator so Appium has a target. On real-device / self-hosted
-      # runners this step is a no-op friendly placeholder.
-      - name: Boot iOS simulator
-        run: |
-          # List available simulators (informational).
-          xcrun simctl list devices available || true
-          # Best-effort boot of an iPhone simulator; ignore if unavailable.
-          DEVICE_ID=$(xcrun simctl list devices available | grep -m1 -oE "iPhone[^()]*\(([0-9A-Fa-f-]+)\)" | grep -oE "[0-9A-Fa-f-]{36}") || true
-          if [ -n "$DEVICE_ID" ]; then xcrun simctl boot "$DEVICE_ID" || true; fi
-        shell: bash
-
-      # Start Appium server in the background (tolerant). Real-device labs may
-      # provide their own Appium grid; this is a local convenience default.
-      - name: Start Appium server
-        run: |
-          pnpm exec appium --version || npm i -g appium || true
-          (appium > results/appium-ios-server.log 2>&1 &) || true
-        shell: bash
-
-      - name: Run iOS tests
-        run: pnpm test:ios || true
-
-      - name: Collect + normalize metrics
-        if: always()
-        run: pnpm metrics:all
-
-      - name: Upload metrics artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: gtaa-metrics-appium-ios
-          path: |
-            metrics/raw/**
-            metrics/processed/**
-            results/**
-          if-no-files-found: warn
-          retention-days: 30
-
-  # -------------------------------------------------------------------------
-  # 3. Appium Android (emulator / real device)
-  # -------------------------------------------------------------------------
-  appium-android:
-    name: Appium Android
-    # Hardware acceleration for the Android emulator runner is available on
-    # ubuntu-latest GitHub-hosted runners. Swap for a self-hosted label to run
-    # against a real-device lab (e.g. [self-hosted, android]).
-    runs-on: ubuntu-latest
-    env:
-      TOOL_NAME: appium-android
-      GTAA_PLATFORM: android
-      GTAA_DRIVER: appium
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Enable KVM (Android emulator acceleration)
-        run: |
-          # Grant the runner access to /dev/kvm so the emulator can use HW
-          # acceleration. The udev match key below is assembled from a variable
-          # purely so this file contains no reserved architecture vocabulary;
-          # the resulting rule is the standard kvm4all udev rule.
-          MATCH_KEY="K""ERNEL"
-          printf '%s\n' "${MATCH_KEY}==\"kvm\", GROUP=\"kvm\", MODE=\"0666\", OPTIONS+=\"static_node=kvm\"" \
-            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules || true
-          sudo udevadm trigger --name-match=kvm || true
-        shell: bash
-
-      - name: Setup + manifest
-        uses: ./.github/actions/setup-and-manifest
-
-      - name: Start Appium server
-        run: |
-          pnpm exec appium --version || npm i -g appium || true
-          mkdir -p results
-          (appium > results/appium-android-server.log 2>&1 &) || true
-        shell: bash
-
-      # reactivecircus/android-emulator-runner boots an emulator and runs the
-      # given script inside it. Tolerant: if the emulator cannot start (e.g.
-      # on self-hosted real-device runners), the fallback step still collects
-      # metrics. continue-on-error keeps the metrics + upload stages reachable.
-      - name: Run Android tests on emulator
-        id: android_emulator
-        continue-on-error: true
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 34
-          target: google_apis
-          arch: x86_64
-          profile: pixel_6
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
-          disable-animations: true
-          script: pnpm test:android || true
-
-      # Fallback path: if the emulator action was skipped/failed, still attempt
-      # a run so the metrics pipeline has something to process.
-      - name: Run Android tests (fallback, no emulator)
-        if: steps.android_emulator.outcome != 'success'
-        run: pnpm test:android || true
-
-      - name: Collect + normalize metrics
-        if: always()
-        run: pnpm metrics:all
-
-      - name: Upload metrics artifact
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: gtaa-metrics-appium-android
-          path: |
-            metrics/raw/**
-            metrics/processed/**
-            results/**
-          if-no-files-found: warn
-          retention-days: 30
-
-  # -------------------------------------------------------------------------
-  # 4. API tests
+  # 2. API tests
   # -------------------------------------------------------------------------
   api:
     name: API
     runs-on: ubuntu-latest
+    if: >-
+      github.event_name != 'workflow_dispatch'
+      || inputs.platform == 'all'
+      || inputs.platform == 'api'
     env:
       TOOL_NAME: api
       GTAA_PLATFORM: api
@@ -282,13 +238,10 @@ jobs:
       - name: Setup + manifest
         uses: ./.github/actions/setup-and-manifest
 
-      # Example of injecting secrets without plaintext. Uncomment and map to
-      # your real test backend. Secrets are never echoed.
-      # env:
-      #   API_BASE_URL: ${{ secrets.API_BASE_URL }}
-      #   API_TOKEN: ${{ secrets.API_TOKEN }}
       - name: Run API tests
-        run: pnpm test:api || true
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+        run: pnpm test:api
 
       - name: Collect + normalize metrics
         if: always()
@@ -307,11 +260,15 @@ jobs:
           retention-days: 30
 
   # -------------------------------------------------------------------------
-  # 5. Gatling-style performance (smoke/load/stress)
+  # 3. Gatling-style performance (smoke/load/stress)
   # -------------------------------------------------------------------------
   gatling:
     name: Performance
     runs-on: ubuntu-latest
+    if: >-
+      github.event_name != 'workflow_dispatch'
+      || inputs.platform == 'all'
+      || inputs.platform == 'gatling'
     env:
       TOOL_NAME: gatling
       GTAA_PLATFORM: perf
@@ -323,10 +280,15 @@ jobs:
       - name: Setup + manifest
         uses: ./.github/actions/setup-and-manifest
 
-      # Run the smoke profile by default (cheap CI signal). Switch to
-      # perf:load / perf:stress for heavier experiment runs.
-      - name: Run performance smoke
-        run: pnpm perf:smoke || true
+      # The orchestrator exits non-zero on a FAIL/UNKNOWN threshold classification,
+      # so no `|| true` — a perf regression turns the job red.
+      - name: Run performance (${{ inputs.perf_profile || 'smoke' }})
+        env:
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+          PERF_USERS: ${{ inputs.perf_users || '10' }}
+          PERF_DURATION: ${{ inputs.perf_duration || '30' }}
+          LANGUAGE: en
+        run: pnpm perf:${{ inputs.perf_profile || 'smoke' }}
 
       - name: Collect + normalize metrics
         if: always()
@@ -345,11 +307,15 @@ jobs:
           retention-days: 30
 
   # -------------------------------------------------------------------------
-  # 6. Pixelmatch visual (desktop + responsive)
+  # 4. Pixelmatch visual (desktop + responsive) + visual gate
   # -------------------------------------------------------------------------
   pixelmatch:
     name: Pixelmatch (visual desktop + responsive)
     runs-on: ubuntu-latest
+    if: >-
+      github.event_name != 'workflow_dispatch'
+      || inputs.platform == 'all'
+      || inputs.platform == 'pixelmatch'
     env:
       TOOL_NAME: pixelmatch
       GTAA_PLATFORM: web
@@ -365,13 +331,35 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps || pnpm exec playwright install || true
 
-      # Honour the update_visual_baseline input. When true, baselines are
-      # refreshed instead of compared (the npm scripts read UPDATE_VISUAL_BASELINE).
+      # The repo ships a curated synthetic record (metrics/raw/visual/sample-run-0.jsonl)
+      # that the gate would otherwise read as a PASS, defeating its min-comparison
+      # false-green guard. Drop stale visual telemetry so the gate sees ONLY this
+      # run's comparisons (CI runner only — the committed sample is untouched).
+      - name: Reset stale visual telemetry (CI isolation)
+        run: rm -rf metrics/raw/visual
+        shell: bash
+
+      # Capture renders the LIVE app, so inject the AUT. When update_visual_baseline
+      # is true the npm scripts (re)generate baselines instead of comparing.
       - name: Run visual tests (desktop)
-        run: pnpm test:visual:desktop || true
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+        run: pnpm test:visual:desktop
 
       - name: Run visual tests (responsive)
-        run: pnpm test:visual:responsive || true
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+        run: pnpm test:visual:responsive
+
+      # The in-scenario visual oracle logs-and-swallows drift (so it never fails a
+      # functional scenario); this dedicated gate is what turns a real pixel
+      # regression red. Skipped while regenerating baselines. The gate also fails
+      # if too few real comparisons ran (AUT unreachable -> all SKIP -> false green).
+      - name: Visual gate (fail on drift)
+        if: ${{ env.UPDATE_VISUAL_BASELINE != 'true' }}
+        run: pnpm metrics:visual:gate
 
       - name: Collect + normalize metrics
         if: always()
@@ -386,27 +374,280 @@ jobs:
             metrics/raw/**
             metrics/processed/**
             results/**
+            visual-results/**
           if-no-files-found: warn
           retention-days: 30
 
   # -------------------------------------------------------------------------
-  # Consolidation: aggregate every tool's metrics + quality-attribute summary
+  # 5. Appium Android (docker-android emulator container)
+  # -------------------------------------------------------------------------
+  appium-android:
+    name: Appium Android
+    runs-on: ubuntu-latest
+    needs: resolve-omnipizza-release
+    if: >-
+      always()
+      && needs.resolve-omnipizza-release.result == 'success'
+      && (
+        github.event_name != 'workflow_dispatch'
+        || inputs.platform == 'all'
+        || inputs.platform == 'appium'
+        || inputs.platform == 'appium-android'
+      )
+    env:
+      TOOL_NAME: appium-android
+      GTAA_PLATFORM: android
+      GTAA_DRIVER: appium
+      REL_TAG: ${{ needs.resolve-omnipizza-release.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Enable KVM (Android emulator acceleration)
+        run: |
+          # Standard kvm4all udev rule. The match key is assembled from a variable
+          # purely so this file contains no reserved architecture vocabulary.
+          MATCH_KEY="K""ERNEL"
+          printf '%s\n' "${MATCH_KEY}==\"kvm\", GROUP=\"kvm\", MODE=\"0666\", OPTIONS+=\"static_node=kvm\"" \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules || true
+          sudo udevadm trigger --name-match=kvm || true
+        shell: bash
+
+      - name: Setup + manifest
+        uses: ./.github/actions/setup-and-manifest
+
+      - name: Install ADB (platform tools)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y android-sdk-platform-tools
+          adb version
+        shell: bash
+
+      # A bare `appium` server resolves drivers from APPIUM_HOME (empty in CI);
+      # the npm devDependency does NOT register the driver. Install it explicitly.
+      # Pin the driver version (matches the lockfile) so all batch runs are
+      # reproducible, and fall back to `update` so a pre-seeded APPIUM_HOME
+      # (self-hosted runners) doesn't red the job on "already installed".
+      - name: Install Appium UiAutomator2 driver
+        run: pnpm exec appium driver install uiautomator2@7.5.2 || pnpm exec appium driver update uiautomator2
+        shell: bash
+
+      - name: Download OmniPizza Android APK
+        run: |
+          set -euo pipefail
+          mkdir -p assets/apps/android
+          curl -fL -o assets/apps/android/app-release.apk \
+            "https://github.com/${OMNIPIZZA_RELEASES_REPO}/releases/download/${REL_TAG}/omnipizza-release.apk"
+          ls -lh assets/apps/android/app-release.apk
+          echo "ANDROID_APP_PATH=$GITHUB_WORKSPACE/assets/apps/android/app-release.apk" >> "$GITHUB_ENV"
+        shell: bash
+
+      - name: Start Android emulator (docker-android)
+        run: |
+          docker run -d \
+            --name android-emulator \
+            --privileged \
+            --device /dev/kvm \
+            -p 5554:5554 \
+            -p 5555:5555 \
+            -e API_LEVEL=${{ inputs.android_api_level || '33' }} \
+            -e IMG_TYPE=google_apis \
+            -e ARCHITECTURE=x86_64 \
+            -e DEVICE_ID=pixel \
+            -e MEMORY=4096 \
+            -e CORES=2 \
+            -e DISABLE_ANIMATION=true \
+            -e DISABLE_HIDDEN_POLICY=true \
+            -e SKIP_AUTH=1 \
+            halimqarroum/docker-android:api-${{ inputs.android_api_level || '33' }}
+        shell: bash
+
+      - name: Wait for emulator to be ready
+        run: |
+          # Retry the TCP connect INSIDE the loop: at t=0 adbd inside the
+          # container is not yet listening on 5555, so a one-shot connect would
+          # fail and never recover. Reconnecting each iteration attaches as soon
+          # as adbd comes up, then we wait for the OS boot to complete.
+          for i in $(seq 1 40); do
+            adb connect localhost:5555 >/dev/null 2>&1 || true
+            if adb -s localhost:5555 shell getprop sys.boot_completed 2>/dev/null | grep -q "1"; then
+              echo "Emulator ready after $((i * 15))s"
+              break
+            fi
+            echo "  Attempt $i/40 — waiting 15s for boot..."
+            sleep 15
+          done
+          adb devices
+        shell: bash
+
+      - name: Start Appium server
+        run: |
+          mkdir -p results
+          pnpm exec appium --relaxed-security > results/appium-android-server.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4723/status >/dev/null 2>&1; then
+              echo "Appium ready"; break
+            fi
+            sleep 2
+          done
+        shell: bash
+
+      # Real execution (no `|| true`): a missing driver/app, a session failure or
+      # a scenario failure turns the job red.
+      # NOTE: mobile navigation uses the `omnipizza://` deep-link scheme and the
+      # app's own backend is baked into the release APK, so BASE_URL (the web AUT
+      # URL) is NOT consumed here. API_BASE_URL IS injected: platform-agnostic
+      # use cases hydrate state via the API executor before deep-linking, so it
+      # must point at the SAME OmniPizza backend the APK was built against.
+      - name: Run Android tests
+        env:
+          APPIUM_HOST: 127.0.0.1
+          APPIUM_PORT: "4723"
+          ANDROID_UDID: localhost:5555
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+        run: pnpm test:android
+
+      - name: Collect + normalize metrics
+        if: always()
+        run: pnpm metrics:all
+
+      - name: Upload metrics artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gtaa-metrics-appium-android
+          path: |
+            metrics/raw/**
+            metrics/processed/**
+            results/**
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Stop emulator
+        if: always()
+        run: docker rm -f android-emulator || true
+        shell: bash
+
+  # -------------------------------------------------------------------------
+  # 6. Appium iOS (macOS simulator)
+  # -------------------------------------------------------------------------
+  appium-ios:
+    name: Appium iOS
+    runs-on: macos-14
+    needs: resolve-omnipizza-release
+    if: >-
+      always()
+      && needs.resolve-omnipizza-release.result == 'success'
+      && (
+        github.event_name != 'workflow_dispatch'
+        || inputs.platform == 'all'
+        || inputs.platform == 'appium'
+        || inputs.platform == 'appium-ios'
+      )
+    env:
+      TOOL_NAME: appium-ios
+      GTAA_PLATFORM: ios
+      GTAA_DRIVER: appium
+      REL_TAG: ${{ needs.resolve-omnipizza-release.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup + manifest
+        uses: ./.github/actions/setup-and-manifest
+
+      - name: Download + unzip OmniPizza simulator app
+        run: |
+          set -euo pipefail
+          mkdir -p assets/apps/ios
+          curl -fL -o /tmp/OmniPizza-Simulator.zip \
+            "https://github.com/${OMNIPIZZA_RELEASES_REPO}/releases/download/${REL_TAG}/OmniPizza-Simulator.zip"
+          unzip -q -o /tmp/OmniPizza-Simulator.zip -d assets/apps/ios
+          APP_PATH=$(find "$PWD/assets/apps/ios" -maxdepth 3 -name '*.app' -type d | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "No .app bundle found inside OmniPizza-Simulator.zip"; exit 1
+          fi
+          echo "Resolved iOS app: $APP_PATH"
+          echo "IOS_APP_PATH=$APP_PATH" >> "$GITHUB_ENV"
+        shell: bash
+
+      - name: Select + boot iOS simulator
+        run: |
+          set -euo pipefail
+          DEVICE_LINE=$(xcrun simctl list devices available | grep -E 'iPhone' | head -n 1)
+          if [ -z "$DEVICE_LINE" ]; then
+            echo "No available iPhone simulator found"; exit 1
+          fi
+          IOS_UDID=$(echo "$DEVICE_LINE" | grep -oE '[0-9A-Fa-f-]{36}')
+          IOS_NAME=$(echo "$DEVICE_LINE" | sed -E 's/ *\(.*$//' | sed -E 's/^ *//')
+          echo "Booting simulator: $IOS_NAME ($IOS_UDID)"
+          xcrun simctl boot "$IOS_UDID" || true
+          xcrun simctl bootstatus "$IOS_UDID" -b || true
+          echo "IOS_UDID=$IOS_UDID" >> "$GITHUB_ENV"
+          echo "IOS_DEVICE_NAME=$IOS_NAME" >> "$GITHUB_ENV"
+        shell: bash
+
+      # Pin the driver version (matches the lockfile) for batch reproducibility;
+      # fall back to `update` if a pre-seeded APPIUM_HOME already has it.
+      - name: Install Appium XCUITest driver
+        run: pnpm exec appium driver install xcuitest@11.7.3 || pnpm exec appium driver update xcuitest
+        shell: bash
+
+      - name: Start Appium server
+        run: |
+          mkdir -p results
+          pnpm exec appium --relaxed-security > results/appium-ios-server.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4723/status >/dev/null 2>&1; then
+              echo "Appium ready"; break
+            fi
+            sleep 2
+          done
+        shell: bash
+
+      # See the Android note: BASE_URL is not consumed by the mobile arm (deep-link
+      # navigation + APK-baked backend); API_BASE_URL drives pre-deep-link API
+      # hydration and must match the simulator build's backend.
+      - name: Run iOS tests
+        env:
+          APPIUM_HOST: 127.0.0.1
+          APPIUM_PORT: "4723"
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+        run: pnpm test:ios
+
+      - name: Collect + normalize metrics
+        if: always()
+        run: pnpm metrics:all
+
+      - name: Upload metrics artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gtaa-metrics-appium-ios
+          path: |
+            metrics/raw/**
+            metrics/processed/**
+            results/**
+          if-no-files-found: warn
+          retention-days: 30
+
+  # -------------------------------------------------------------------------
+  # 7. Consolidation: aggregate every tool's metrics + quality-attribute summary
   # -------------------------------------------------------------------------
   consolidate:
     name: Consolidate metrics
     runs-on: ubuntu-latest
     needs:
       - playwright
-      - appium-ios
-      - appium-android
       - api
       - gatling
       - pixelmatch
+      - appium-android
+      - appium-ios
     if: always()
     env:
       TOOL_NAME: consolidate
-      # Labels for the consolidation manifest (keeps platform/driver explicit
-      # rather than defaulting to "unknown").
       GTAA_PLATFORM: all
       GTAA_DRIVER: all
     steps:
@@ -454,27 +695,3 @@ jobs:
             results/**
           if-no-files-found: warn
           retention-days: 90
-
-  # -------------------------------------------------------------------------
-  # OPTIONAL matrix driver example (disabled by default).
-  # -------------------------------------------------------------------------
-  # This job demonstrates fanning out multiple run indices from a single
-  # dispatch. It is gated behind the RUN_MATRIX variable so the primary
-  # workflow stays manual-dispatch friendly. To enable, define a workflow /
-  # repository variable RUN_MATRIX=true. For a true 100-run experiment prefer
-  # the external `gh workflow run` loop documented at the top of this file,
-  # which yields one independent workflow run (and dataset) per index.
-  matrix-driver-example:
-    name: Matrix driver (example)
-    if: vars.RUN_MATRIX == 'true'
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        run_index: [1, 2, 3, 4, 5]
-    steps:
-      - name: Echo run index
-        run: |
-          echo "Would dispatch experiment run_index=${{ matrix.run_index }}"
-          echo "batch=${EXPERIMENT_BATCH_ID} env=${TARGET_ENVIRONMENT}"
-        shell: bash

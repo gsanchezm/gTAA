@@ -50,26 +50,33 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps || pnpm exec playwright install || true
 
-      # With UPDATE_VISUAL_BASELINE=true these runs write new baselines.
+      # With UPDATE_VISUAL_BASELINE=true these runs write new baselines. The
+      # capture renders the LIVE app, so the AUT must be injected here too —
+      # without it the run would hit localhost and produce useless baselines.
       - name: Update visual baselines (desktop)
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
         run: pnpm test:visual:desktop || true
 
       - name: Update visual baselines (responsive)
+        env:
+          BASE_URL: ${{ secrets.BASE_URL }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
         run: pnpm test:visual:responsive || true
 
-      # Upload the refreshed baselines for review. Adjust the path globs below
-      # to match where the visual scripts persist baseline snapshots in this
-      # repo (common locations covered).
+      # Upload the refreshed baselines so they can be reviewed and committed.
+      # The visual oracle persists baselines under visual-baselines/** (see
+      # test-adaptation/visual/visual-paths.ts BASELINES_ROOT) — that is the path
+      # to return; the earlier speculative globs matched nothing in this repo.
       - name: Upload updated baselines
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: gtaa-visual-baselines
           path: |
-            **/__screenshots__/**
-            **/*-snapshots/**
-            **/baselines/**
-            tests/**/visual/**
+            visual-baselines/**
+            visual-results/**
             metrics/raw/**
             metrics/processed/**
             results/**

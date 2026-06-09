@@ -39,6 +39,17 @@ export class AppiumIosExecutor extends AppiumExecutorBase {
     if (ios.appPath) {
       caps['appium:app'] = ios.appPath;
     }
+    // Attach to the exact simulator the runner booted (UDID), so XCUITest does
+    // not match by name and risk targeting/booting a different sim. Unset for
+    // local deviceName-only runs.
+    if (ios.udid) {
+      caps['appium:udid'] = ios.udid;
+    }
+    // The AUT talks to a free-tier backend that cold-starts; a login/API call can
+    // pause the node side >60s between commands. Raise the server's idle session
+    // timeout (default 60s) so a cold start doesn't kill the session mid-scenario
+    // — mirrors the Android executor.
+    caps['appium:newCommandTimeout'] = 180;
 
     return caps;
   }

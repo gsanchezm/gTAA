@@ -39,14 +39,24 @@ export interface MobileConfig {
   appiumHost: string;
   appiumPort: number;
   timeoutMs: number;
+  /** webdriverio create-session timeout; raised for cold CI emulator/simulator boots. */
+  sessionTimeoutMs: number;
   android: {
     appPath: string;
     deviceName: string;
     platformVersion: string;
     unlockType: string;
     unlockKey: string;
+    /** Optional explicit ADB device target (e.g. a docker-android `localhost:5555`). */
+    udid: string;
   };
-  ios: { appPath: string; deviceName: string; platformVersion: string };
+  ios: {
+    appPath: string;
+    deviceName: string;
+    platformVersion: string;
+    /** Optional explicit simulator UDID so Appium attaches to the booted sim. */
+    udid: string;
+  };
 }
 
 export interface VisualConfig {
@@ -82,17 +92,20 @@ export function mobileConfig(): MobileConfig {
     appiumHost: str('APPIUM_HOST', '127.0.0.1'),
     appiumPort: num('APPIUM_PORT', 4723),
     timeoutMs: num('MOBILE_TIMEOUT_MS', 30000),
+    sessionTimeoutMs: num('MOBILE_SESSION_TIMEOUT_MS', 240000),
     android: {
       appPath: str('ANDROID_APP_PATH'),
       deviceName: str('ANDROID_DEVICE_NAME', 'Android Emulator'),
       platformVersion: str('ANDROID_PLATFORM_VERSION'),
       unlockType: str('ANDROID_UNLOCK_TYPE'),
       unlockKey: str('ANDROID_UNLOCK_KEY'),
+      udid: str('ANDROID_UDID'),
     },
     ios: {
       appPath: str('IOS_APP_PATH'),
       deviceName: str('IOS_DEVICE_NAME', 'iPhone 15'),
       platformVersion: str('IOS_PLATFORM_VERSION'),
+      udid: str('IOS_UDID'),
     },
   };
 }

@@ -36,6 +36,12 @@ export class AppiumAndroidExecutor extends AppiumExecutorBase {
     if (android.appPath) {
       caps['appium:app'] = android.appPath;
     }
+    // Pin the ADB target when provided (e.g. a docker-android container reached
+    // over TCP at `localhost:5555`). Left unset for a single auto-detected
+    // emulator/device, so local on-device runs are unaffected.
+    if (android.udid) {
+      caps['appium:udid'] = android.udid;
+    }
     // NOTE: we intentionally do NOT set appium:unlockType. On this foldable
     // Samsung it forces a per-session unlock that fails ("The device has failed
     // to be unlocked"); the device is run with NO screen lock instead.

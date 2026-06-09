@@ -42,6 +42,8 @@ type RemoteOptions = {
   path: string;
   capabilities: Record<string, unknown>;
   logLevel?: string;
+  /** Per-request timeout (incl. create-session) — raised for cold CI boots. */
+  connectionRetryTimeout?: number;
 };
 
 /** Transient Appium session-bootstrap failures that are worth a retry. */
@@ -101,6 +103,7 @@ export abstract class AppiumExecutorBase implements UiDriver {
       port: this.config.appiumPort,
       path: '/',
       logLevel: 'error',
+      connectionRetryTimeout: this.config.sessionTimeoutMs,
       capabilities: this.buildCapabilities(),
     };
 
