@@ -41,6 +41,14 @@ const REF = {
 
 const DOMAIN = 'checkout';
 
+/**
+ * Wait budget for the order-success screen after submitting an order. The free-
+ * tier backend can cold-start on the first order of a run, so this is well above
+ * the default explicit-wait timeout to avoid an intermittent "never became
+ * visible" flake on a slow round-trip.
+ */
+const ORDER_ACCEPT_TIMEOUT_MS = 60_000;
+
 interface OrderDraft {
   market?: string;
   item?: string;
@@ -244,7 +252,11 @@ export class CheckoutUseCase {
 
     const ui = await this.world.ui();
     await ui.click(REF.placeOrderButton);
-    await ui.waitForVisible(REF.orderSuccessScreen);
+    // Placing the order round-trips to the (free-tier, cold-starting) backend
+    // before the success screen renders, which can exceed the default explicit
+    // wait. Give this specific step a generous budget so a cold backend doesn't
+    // flake "order_success.orderSuccessScreen never became visible".
+    await ui.waitForVisible(REF.orderSuccessScreen, ORDER_ACCEPT_TIMEOUT_MS);
     const accepted = await ui.isVisible(REF.orderSuccessScreen);
     if (!accepted) {
       throw new ClassifiedError(
