@@ -164,12 +164,20 @@ export abstract class AppiumExecutorBase implements UiDriver {
       profile: 'nav-profile',
     };
     const target = navTestId[section];
-    if (target) {
-      try {
-        await safeTap(this.requireSession(), `~${target}`, this.platformKind, this.timeoutMs);
-      } catch {
-        // Best-effort: the app may already be on the target section.
+    if (!target) {
+      // Routes with no bottom-nav tab (e.g. order-success) are reached via a full
+      // deep link carrying their params (orderId/market/lang) — the AUT and TOM
+      // enter them this way; a tab tap cannot. With no query there is nothing to
+      // route to, so it stays a no-op (e.g. `/login`, `/`).
+      if (section && query) {
+        await this.deepLink(`omnipizza://${section}?${query}`);
       }
+      return;
+    }
+    try {
+      await safeTap(this.requireSession(), `~${target}`, this.platformKind, this.timeoutMs);
+    } catch {
+      // Best-effort: the app may already be on the target section.
     }
     // A bottom-nav tap cannot carry the `?lang=` the web path uses to switch the
     // CH market between German and French. The AUT applies a `lang` override only
@@ -179,30 +187,36 @@ export abstract class AppiumExecutorBase implements UiDriver {
     // ignores them), so en/es/ja are skipped — leaving the market path untouched.
     const lang = langParamOf(query);
     if (lang === 'fr' || lang === 'de') {
-      await this.applyMobileLanguage(section || 'catalog', lang);
+      await this.applyMobileLanguage(section, lang);
     }
   }
 
   /**
-   * Apply a CH language override (de/fr) that the bottom-nav tap cannot carry, by
-   * delivering an `omnipizza://<route>?lang=<lang>` deep link to the running app.
-   * The AUT's deep-link handler calls the store's CH-guarded setLanguage, which
-   * the live session picks up warmly (onNewIntent), so the screen re-renders in
-   * the chosen language without losing the logged-in session. Android only (the
-   * deep-link command takes a `package`); best-effort — the override only matters
-   * for CH, so a failure here must never break navigation.
+   * Deliver a deep link to the running app via UiAutomator2's `mobile: deepLink`
+   * (Android only — the command takes a `package`). The AUT picks it up warmly
+   * (onNewIntent) so the logged-in session is preserved. Best-effort: a deep link
+   * is an enhancement over the tab tap, so a failure must never break navigation.
    */
-  protected async applyMobileLanguage(route: string, lang: string): Promise<void> {
+  protected async deepLink(url: string): Promise<void> {
     if (this.platformKind !== 'android') return;
-    const url = `omnipizza://${route}?lang=${encodeURIComponent(lang)}`;
     try {
       await this.requireSession().execute('mobile: deepLink', {
         url,
         package: AUT_ANDROID_PACKAGE,
       });
     } catch {
-      // Best-effort: never fail navigation on the language override.
+      // Best-effort: never fail navigation on a deep link.
     }
+  }
+
+  /**
+   * Apply a CH language override (de/fr) that the bottom-nav tap cannot carry, by
+   * delivering an `omnipizza://<route>?lang=<lang>` deep link. The AUT's handler
+   * calls the store's CH-guarded setLanguage, so the screen re-renders in the
+   * chosen language without losing the logged-in session.
+   */
+  protected async applyMobileLanguage(route: string, lang: string): Promise<void> {
+    await this.deepLink(`omnipizza://${route}?lang=${encodeURIComponent(lang)}`);
   }
 
   // ---- UiDriver interactions (delegated to shared defensive helpers) ------

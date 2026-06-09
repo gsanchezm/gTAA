@@ -87,8 +87,18 @@ export class OrderSuccessUseCase {
         language: String(this.world.state.language ?? 'en'),
         token: String(this.world.state.token ?? ''),
       });
+      await ui.navigate(`/order-success?orderId=${encodeURIComponent(this.orderId())}`);
+    } else {
+      // Native mobile has no UI journey to order-success and no bottom-nav tab for
+      // it; the appium navigate() turns this no-tab route into a deep link
+      // (omnipizza://order-success?…) so the AUT fetches the order (orderId), sets
+      // the market, and localizes (lang) — the params the web path seeds instead.
+      await ui.navigate(
+        `/order-success?orderId=${encodeURIComponent(this.orderId())}` +
+          `&market=${encodeURIComponent(String(this.world.state.market ?? 'US'))}` +
+          `&lang=${encodeURIComponent(String(this.world.state.language ?? 'en'))}`,
+      );
     }
-    await ui.navigate(`/order-success?orderId=${encodeURIComponent(this.orderId())}`);
     await ui.waitForVisible(REF.screen);
   }
 
