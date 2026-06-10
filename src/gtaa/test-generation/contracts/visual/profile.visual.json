@@ -35,9 +35,9 @@
     },
     {
       "id": "profile_post_save",
-      "description": "Profile after a successful save and reload — values persisted, save button at rest. Tagged so it only matches the persistence scenario (which lacks @ui-only); the card-render and form-label snapshots above cover the pre-update render path.",
+      "description": "Profile after a successful save and reload — values persisted, save button at rest. Tagged so it only matches the persistence scenario (which lacks @ui-only); the card-render and form-label snapshots above cover the pre-update render path. The full-name value is masked: OmniPizza's demo backend keeps a SHARED full_name for standard_user, so a concurrent/prior market scenario's save bleeds through (e.g. a JP name in the US capture) — mask it like the sibling snapshots so the gate validates the stable card chrome, not the shared mutable value.",
       "regionRef": "profileFullNameInput",
-      "maskRefs": ["profilePhoneNumberInput", "notesInput"],
+      "maskRefs": ["profileFullNameInput", "profilePhoneNumberInput", "notesInput"],
       "platforms": ["web", "android", "ios"],
       "viewports": ["desktop", "responsive", "mobile"],
       "thresholds": { "pixelRatio": 0.01 },

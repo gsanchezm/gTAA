@@ -9,9 +9,9 @@
   "snapshots": [
     {
       "id": "checkout_order_summary",
-      "description": "Order summary panel: items, subtotal, tax, delivery, total.",
+      "description": "Order summary panel: items, subtotal, tax, delivery, total. The order id (#ORDER-xxxx) is uniquely generated per order, so mask it (cross-domain order_success ref) alongside the total to keep the comparison about the stable layout.",
       "regionRef": "orderDetailsList",
-      "maskRefs": ["orderTotalValue"],
+      "maskRefs": ["orderTotalValue", "order_success.orderIdLabel"],
       "platforms": ["web", "android", "ios"],
       "viewports": ["desktop", "responsive", "mobile"],
       "thresholds": { "pixelRatio": 0.005 },
