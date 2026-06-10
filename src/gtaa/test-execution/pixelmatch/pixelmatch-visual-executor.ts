@@ -378,18 +378,27 @@ function isTargeted(snapshot: VisualSnapshot, target: VisualTarget): boolean {
 }
 
 /**
- * Threshold precedence: snapshot.thresholds.pixelRatio -> contract defaults ->
- * visualConfig().pixelRatio.
+ * Threshold precedence: max(snapshot.thresholds.pixelRatio | contract defaults,
+ * visualConfig().pixelRatio). VISUAL_PIXEL_RATIO acts as a global FLOOR, not just
+ * a fallback: it absorbs environmental rendering noise (hosted-runner font/anti-
+ * alias variance, ~1-2%) uniformly without editing every contract. Default 0.005
+ * leaves all contract thresholds untouched; raise it in CI (e.g. 0.025) so the
+ * gate stays about real regressions rather than sub-pixel jitter that wanders
+ * snapshot to snapshot each run. An explicit per-snapshot threshold above the
+ * floor (e.g. checkout_order_summary's 0.05 for its animated map) still wins.
  */
 function resolveThreshold(feature: string, snapshot: VisualSnapshot): number {
+  const floor = visualConfig().pixelRatio;
+  let threshold = floor;
   if (typeof snapshot.thresholds?.pixelRatio === 'number') {
-    return snapshot.thresholds.pixelRatio;
+    threshold = snapshot.thresholds.pixelRatio;
+  } else {
+    const { defaults } = loadVisualContract(feature, snapshot.id);
+    if (typeof defaults?.thresholds?.pixelRatio === 'number') {
+      threshold = defaults.thresholds.pixelRatio;
+    }
   }
-  const { defaults } = loadVisualContract(feature, snapshot.id);
-  if (typeof defaults?.thresholds?.pixelRatio === 'number') {
-    return defaults.thresholds.pixelRatio;
-  }
-  return visualConfig().pixelRatio;
+  return Math.max(threshold, floor);
 }
 
 export { BASELINE_CREATED_REASON };

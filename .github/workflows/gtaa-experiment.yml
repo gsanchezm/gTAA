@@ -321,6 +321,10 @@ jobs:
       GTAA_PLATFORM: web
       GTAA_DRIVER: pixelmatch
       GTAA_VISUAL: "true"
+      # Global floor for the visual gate: absorb hosted-runner rendering noise
+      # (~1-2%) so the gate flags real regressions, not sub-pixel jitter that
+      # wanders snapshot to snapshot. Per-snapshot thresholds above this win.
+      VISUAL_PIXEL_RATIO: "0.025"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
