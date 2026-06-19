@@ -1,2 +1,11 @@
 run_id,simulation_name,request_count,success_count,failure_count,mean_response_time_ms,p95_response_time_ms,max_response_time_ms,threshold_status,duration_ms,failure_bucket,architecture_type,repository_name,experiment_batch_id,run_index,workflow_run_id,workflow_attempt,tool_name,platform,viewport,generated_at
-sample-run-0,OrderLoadSimulation,1000,994,6,142,410,980,PASS,60000,,GTAA_BASELINE,gTAA,sample-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,gatling,ALL,ALL,2026-05-29T06:20:17.079Z
+run-03cf2b08-3a4e-4820-b1b3-c30a4b73214d,checkout-load,0,0,0,,,,UNKNOWN,17806,INFRASTRUCTURE_FAILURE,GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,gatling,ALL,ALL,2026-06-09T17:38:56.674Z
+run-2c02348a-5c89-49ce-9b0f-e85c7bf4131c,checkout-load,0,0,0,,,,UNKNOWN,8540,INFRASTRUCTURE_FAILURE,GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,gatling,ALL,ALL,2026-06-09T17:38:56.674Z
+run-5708d0ee-62d8-40ad-8a14-7141a5c5e3d1,checkout-load,3,3,0,203,382,382,PASS,7225,,GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,gatling,ALL,ALL,2026-06-09T17:38:56.674Z
+run-5ad58d33-85fa-4467-9226-b2c7b24b89a4,checkout-load,0,0,0,,,,UNKNOWN,22876,INFRASTRUCTURE_FAILURE,GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,gatling,ALL,ALL,2026-06-09T17:38:56.674Z
+run-6f0411d0-d642-40a1-88bd-60cf72cf1cec,checkout-load,3,3,0,144,193,193,PASS,6988,,GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,gatling,ALL,ALL,2026-06-09T17:38:56.674Z
+run-7ae8d2c8-fc5b-4c3c-9f49-b1c1f9f09358,checkout-load,0,0,0,,,,UNKNOWN,7387,INFRASTRUCTURE_FAILURE,GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,gatling,ALL,ALL,2026-06-09T17:38:56.674Z
+run-921aff60-309a-45ff-8ea2-b39f0ae49b60,checkout-load,0,0,0,,,,UNKNOWN,9798,INFRASTRUCTURE_FAILURE,GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,gatling,ALL,ALL,2026-06-09T17:38:56.674Z
+run-99d95df3-f55b-4f00-8a7d-a166e7369a34,invalid-login-load,1,1,0,209,209,209,PASS,6930,,GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,gatling,ALL,ALL,2026-06-09T17:38:56.674Z
+run-dee9d331-cdce-4b67-aca7-79785e5a254b,login-load,1,1,0,215,215,215,PASS,6718,,GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,gatling,ALL,ALL,2026-06-09T17:38:56.674Z
+sample-run-0,OrderLoadSimulation,1000,994,6,142,410,980,PASS,60000,,GTAA_BASELINE,gTAA,sample-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,gatling,ALL,ALL,2026-06-09T17:38:56.674Z

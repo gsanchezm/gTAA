@@ -1,4 +1,6 @@
 platform,tool_name,count,p50_duration_ms,p95_duration_ms,p99_duration_ms,mean_duration_ms,min_duration_ms,max_duration_ms,architecture_type,repository_name,experiment_batch_id,run_index,workflow_run_id,workflow_attempt,tool_name,platform,viewport,generated_at
-android,playwright,2,2637.5,2671.25,2674.25,2637.5,2600,2675,GTAA_BASELINE,gTAA,sample-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,playwright,android,android,2026-05-29T06:20:14.390Z
-desktop,playwright,2,1225,1247.5,1249.5,1225,1200,1250,GTAA_BASELINE,gTAA,sample-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,playwright,desktop,desktop,2026-05-29T06:20:14.390Z
-responsive,playwright,2,1860,1914,1918.8,1860,1800,1920,GTAA_BASELINE,gTAA,sample-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,playwright,responsive,responsive,2026-05-29T06:20:14.390Z
+android,appium-android,1467,80079.76,346454.86,404461.12,108965.54,9791.04,509662.18,GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,appium-android,android,mobile,2026-06-09T17:38:54.088Z
+android,playwright,2,2637.5,2671.25,2674.25,2637.5,2600,2675,GTAA_BASELINE,gTAA,sample-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,playwright,android,android,2026-06-09T17:38:54.088Z
+api,api,335,475.19,1407.96,2274.04,592.32,1.13,3166.6,GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,api,api,ALL,2026-06-09T17:38:54.088Z
+desktop,playwright,1498,6165.86,65507.98,126916.97,20938.55,158.27,190284.83,GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,playwright,desktop,desktop,2026-06-09T17:38:54.088Z
+responsive,playwright,721,7077.63,66652.61,124855.42,24862.13,1800,132901.48,GTAA_BASELINE,gTAA,local-batch,0,NOT_AVAILABLE,NOT_AVAILABLE,playwright,responsive,responsive,2026-06-09T17:38:54.088Z

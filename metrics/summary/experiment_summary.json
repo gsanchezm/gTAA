@@ -3,19 +3,19 @@
   "repository_name": "gTAA",
   "experiment_batch_id": "local-batch",
   "run_index": "0",
-  "generated_at": "2026-05-29T06:20:19.666Z",
+  "generated_at": "2026-06-09T17:38:59.317Z",
   "totals": {
     "scenarios_in_features": 22,
-    "scenario_telemetry_events": 6,
-    "scenarios_passed": 5,
-    "api_events": 1,
-    "api_passed": 1,
-    "visual_events": 1,
-    "visual_passed": 1,
-    "performance_simulations": 1,
-    "failure_events": 1
+    "scenario_telemetry_events": 4023,
+    "scenarios_passed": 2071,
+    "api_events": 417,
+    "api_passed": 277,
+    "visual_events": 493,
+    "visual_passed": 196,
+    "performance_simulations": 10,
+    "failure_events": 4426
   },
-  "pass_rate_pct": 83.33,
+  "pass_rate_pct": 51.48,
   "coverage_by_platform": {
     "desktop": 17,
     "responsive": 15,
@@ -26,6 +26,14 @@
     "visual": 21
   },
   "failure_buckets": {
-    "UI_ACTION_FAILURE": 1
+    "API_CONTRACT_FAILURE": 14,
+    "API_RESPONSE_FAILURE": 126,
+    "ASSERTION_FAILURE": 1838,
+    "INFRASTRUCTURE_FAILURE": 5,
+    "TIMEOUT_FAILURE": 858,
+    "UI_ACTION_FAILURE": 1,
+    "UNKNOWN_FAILURE": 1530,
+    "VISUAL_DIFF_FAILURE": 10,
+    "WEB_SESSION_FAILURE": 44
   }
 }
