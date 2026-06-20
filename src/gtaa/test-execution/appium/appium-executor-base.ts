@@ -42,6 +42,10 @@ type RemoteOptions = {
   path: string;
   capabilities: Record<string, unknown>;
   logLevel?: string;
+  /** Max time webdriverio waits for POST /session before aborting. The default
+   *  (120s) is shorter than a cold iOS WebDriverAgent launch, which aborts the
+   *  session mid-bootstrap; raise it so WDA has room to come up. */
+  connectionRetryTimeout?: number;
 };
 
 /** Transient Appium session-bootstrap failures that are worth a retry. */
@@ -101,6 +105,9 @@ export abstract class AppiumExecutorBase implements UiDriver {
       port: this.config.appiumPort,
       path: '/',
       logLevel: 'error',
+      // A cold iOS WDA launch can exceed webdriverio's 120s default; give the
+      // session bootstrap headroom (harmless for Android, which starts fast).
+      connectionRetryTimeout: 300000,
       capabilities: this.buildCapabilities(),
     };
 
@@ -114,6 +121,9 @@ export abstract class AppiumExecutorBase implements UiDriver {
         // remote() returns the rich webdriverio Browser; we only consume the
         // loose MobileSession surface, so narrow through unknown.
         this.session = (await remote(options as never)) as unknown as MobileSession;
+        // Platform-specific runtime tuning (e.g. iOS snapshot settings). Runs
+        // once per session, after bootstrap; the hook is best-effort by contract.
+        await this.afterStart();
         return;
       } catch (err) {
         lastErr = err;
@@ -146,6 +156,16 @@ export abstract class AppiumExecutorBase implements UiDriver {
     } finally {
       this.session = undefined;
     }
+  }
+
+  /**
+   * Post-bootstrap hook for platform-specific runtime settings (e.g. iOS
+   * XCUITest snapshot/idle tuning applied via updateSettings). Default no-op so
+   * Android keeps its current behavior; overrides MUST be best-effort and never
+   * throw — an otherwise-healthy session must not fail on optional tuning.
+   */
+  protected async afterStart(): Promise<void> {
+    // no-op by default
   }
 
   /**
@@ -259,10 +279,18 @@ export abstract class AppiumExecutorBase implements UiDriver {
   }
 
   async waitForVisible(ref: string, timeoutMs?: number): Promise<void> {
+    // Screen/visibility GATE (not an interaction): on iOS, accept an element's
+    // presence in the accessibility tree as readiness, because React-Native
+    // container Views report a false visible flag while genuinely on screen.
+    // Android keeps the strict displayed check (acceptExisting stays false), and
+    // the interaction path (safeTap/safeType) stays strict everywhere so a tap
+    // still scrolls a not-yet-hittable element into view.
     await waitForDisplayed(
       this.requireSession(),
       this.selectorFor(ref),
       timeoutMs ?? this.timeoutMs,
+      undefined,
+      this.platformKind === 'ios',
     );
   }
 

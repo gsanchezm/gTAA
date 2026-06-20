@@ -46,7 +46,17 @@ export interface MobileConfig {
     unlockType: string;
     unlockKey: string;
   };
-  ios: { appPath: string; deviceName: string; platformVersion: string };
+  ios: {
+    appPath: string;
+    deviceName: string;
+    platformVersion: string;
+    /** Stable Xcode derivedDataPath so WDA is reused (incremental build) across the
+     *  per-scenario sessions instead of a clean rebuild each time. Empty = Appium default. */
+    derivedDataPath: string;
+    /** Skip the WDA build entirely and launch the prebuilt runner (fastest, but the
+     *  products must already exist at derivedDataPath). Off by default for CI. */
+    usePrebuiltWDA: boolean;
+  };
 }
 
 export interface VisualConfig {
@@ -93,6 +103,8 @@ export function mobileConfig(): MobileConfig {
       appPath: str('IOS_APP_PATH'),
       deviceName: str('IOS_DEVICE_NAME', 'iPhone 15'),
       platformVersion: str('IOS_PLATFORM_VERSION'),
+      derivedDataPath: str('IOS_WDA_DERIVED_DATA_PATH'),
+      usePrebuiltWDA: bool('IOS_USE_PREBUILT_WDA', false),
     },
   };
 }

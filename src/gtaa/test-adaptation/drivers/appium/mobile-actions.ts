@@ -35,6 +35,8 @@ export type MobileSession = {
   execute(script: string, ...args: unknown[]): Promise<unknown>;
   /** Viewport size, used to bound gesture-scroll areas. */
   getWindowSize?(): Promise<{ width: number; height: number }>;
+  /** Apply driver settings at runtime (e.g. XCUITest snapshot/idle tuning). */
+  updateSettings?(settings: Record<string, unknown>): Promise<void>;
   takeScreenshot(): Promise<string>;
 };
 
@@ -44,6 +46,13 @@ export type MobileSession = {
  */
 export type MobileElement = {
   isDisplayed(): Promise<boolean>;
+  /**
+   * Whether the element is present in the accessibility tree (regardless of the
+   * visible flag). Used as an iOS readiness fallback: React-Native container
+   * Views are conditionally rendered, so presence is a reliable "screen is open"
+   * signal even when XCUITest reports the wrapper's visible flag as false.
+   */
+  isExisting?(): Promise<boolean>;
   click(): Promise<void>;
   setValue(value: string): Promise<void>;
   clearValue?(): Promise<void>;
@@ -131,6 +140,15 @@ export async function waitForDisplayed(
   selector: string,
   timeoutMs: number = DEFAULT_WAIT_TIMEOUT_MS,
   pollIntervalMs: number = DEFAULT_POLL_INTERVAL_MS,
+  /**
+   * Presence-sufficient mode for screen/visibility GATES (not interactions). On
+   * iOS, React-Native container Views (accessible={false} wrappers) report the
+   * visible flag as false even when on screen, so the use-case-facing
+   * `waitForVisible` accepts the element's presence in the tree as readiness.
+   * The interaction path (safeTap/safeType) keeps this false — a tap needs the
+   * element hittable, so a false visible flag must still trigger scroll-into-view.
+   */
+  acceptExisting: boolean = false,
 ): Promise<MobileElement> {
   const deadline = Date.now() + Math.max(0, timeoutMs);
   let lastError: unknown;
@@ -139,6 +157,12 @@ export async function waitForDisplayed(
     try {
       const element = await resolveElement(session, selector);
       if (await element.isDisplayed()) {
+        return element;
+      }
+      // isDisplayed() is false both when the element is absent AND when it is
+      // present-but-flagged-invisible. Only the latter is "ready" for a gate, so
+      // distinguish via isExisting(): a present element satisfies a gate on iOS.
+      if (acceptExisting && element.isExisting && (await element.isExisting())) {
         return element;
       }
     } catch (err) {
@@ -291,7 +315,34 @@ export async function dismissNativeAlert(session: MobileSession): Promise<void> 
  * hideKeyboard, swallowing any error: the keyboard API is platform/state
  * dependent and must never fail an interaction.
  */
-export async function dismissKeyboard(session: MobileSession): Promise<void> {
+export async function dismissKeyboard(
+  session: MobileSession,
+  platform?: MobilePlatformKind,
+): Promise<void> {
+  // iOS/XCUITest's hideKeyboard endpoint fails for React-Native apps ("Did not
+  // know how to dismiss the keyboard") and each failed attempt costs ~6-8s. But
+  // the keyboard genuinely obscures targets below it (e.g. the login button sits
+  // under it after typing), so it must come down. RN apps blur the focused input
+  // — dismissing the keyboard — when a tap lands outside it, so tap a neutral
+  // top-center point (well above the inputs and clear of the keyboard), computed
+  // from the window size. Only act when a keyboard is actually shown, to avoid a
+  // stray tap on every type. Verified: this drops the keyboard and makes the
+  // previously-obscured button hittable. Android's hideKeyboard works, unchanged.
+  if (platform === 'ios') {
+    try {
+      if (session.isKeyboardShown && !(await session.isKeyboardShown())) return;
+      const size = session.getWindowSize ? await session.getWindowSize() : undefined;
+      if (size) {
+        await session.execute('mobile: tap', {
+          x: Math.round(size.width / 2),
+          y: Math.round(size.height * 0.12),
+        });
+      }
+    } catch {
+      // Best-effort; a keyboard left up is handled by the caller's readiness path.
+    }
+    return;
+  }
   try {
     const shown = session.isKeyboardShown ? await session.isKeyboardShown() : true;
     if (shown && session.hideKeyboard) {
@@ -332,7 +383,7 @@ export async function safeType(
 ): Promise<void> {
   await withStaleRetry(session, selector, platform, timeoutMs, async (element) => {
     // Dismiss any keyboard that might obscure the target before tapping in.
-    await dismissKeyboard(session);
+    await dismissKeyboard(session, platform);
     if (element.clearValue) {
       try {
         await element.clearValue();
@@ -342,7 +393,7 @@ export async function safeType(
     }
     await element.setValue(text);
     // Dismiss the keyboard raised by typing so it does not obscure later steps.
-    await dismissKeyboard(session);
+    await dismissKeyboard(session, platform);
   });
 }
 
