@@ -64,6 +64,13 @@ function isTransientSessionError(error: unknown): boolean {
  */
 const AUT_ANDROID_PACKAGE = 'com.omnipizza.app';
 
+/**
+ * AUT bundle identifier — the iOS analogue of AUT_ANDROID_PACKAGE. XCUITest's
+ * `mobile: deepLink` takes the app id under `bundleId` (Android uses `package`).
+ * Same string here, different argument key.
+ */
+const AUT_IOS_BUNDLE_ID = 'com.omnipizza.app';
+
 /** Extract the `lang` query-param value from a URL query string ('' if absent). */
 function langParamOf(query: string): string {
   const m = query.match(/(?:^|&)lang=([^&]*)/);
@@ -217,18 +224,24 @@ export abstract class AppiumExecutorBase implements UiDriver {
   }
 
   /**
-   * Deliver a deep link to the running app via UiAutomator2's `mobile: deepLink`
-   * (Android only — the command takes a `package`). The AUT picks it up warmly
-   * (onNewIntent) so the logged-in session is preserved. Best-effort: a deep link
-   * is an enhancement over the tab tap, so a failure must never break navigation.
+   * Deliver a deep link to the running app via `mobile: deepLink`. The AUT picks
+   * it up warmly (Android onNewIntent / iOS openURL) so the logged-in session is
+   * preserved. The command's app-id argument differs by platform — Android takes
+   * `package`, iOS takes `bundleId` — and delivering it is what makes the CH
+   * language override and the hydrateCart/orderId routes work on BOTH platforms
+   * (verified: the iOS AUT flips de/fr on this deep link). Best-effort: a deep
+   * link is an enhancement over the tab tap, so a failure must never break nav.
    */
   protected async deepLink(url: string): Promise<void> {
-    if (this.platformKind !== 'android') return;
+    const args =
+      this.platformKind === 'android'
+        ? { url, package: AUT_ANDROID_PACKAGE }
+        : this.platformKind === 'ios'
+          ? { url, bundleId: AUT_IOS_BUNDLE_ID }
+          : undefined;
+    if (!args) return;
     try {
-      await this.requireSession().execute('mobile: deepLink', {
-        url,
-        package: AUT_ANDROID_PACKAGE,
-      });
+      await this.requireSession().execute('mobile: deepLink', args);
     } catch {
       // Best-effort: never fail navigation on a deep link.
     }
