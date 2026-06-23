@@ -437,6 +437,23 @@ export async function safeTap(
   platform: MobilePlatformKind,
   timeoutMs: number = DEFAULT_WAIT_TIMEOUT_MS,
 ): Promise<void> {
+  // iOS perf: when a soft keyboard is up it usually covers the tap target (the
+  // save/payment button after form entry). Clear it PROACTIVELY here so the wait
+  // below resolves immediately, instead of burning the full timeoutMs first and
+  // only then dismissing it inside withStaleRetry's scroll fallback (~30s wasted
+  // per covered-button scenario). safeType deliberately does NOT do this — typing
+  // needs the keyboard up. Safe for the login button: scrollIntoView's neutral tap
+  // drops the login keyboard and the button becomes displayed BEFORE the
+  // form-submitting submit-blur step is reached, so login is not pre-submitted.
+  if (platform === 'ios' && session.isKeyboardShown) {
+    try {
+      if (await session.isKeyboardShown()) {
+        await scrollIntoView(session, selector, platform);
+      }
+    } catch {
+      // Best-effort; withStaleRetry still handles a covered target on its own.
+    }
+  }
   await withStaleRetry(session, selector, platform, timeoutMs, async (element) => {
     await element.click();
   });
