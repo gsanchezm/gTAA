@@ -70,6 +70,11 @@ env:
   RUN_INDEX: ${{ github.event.inputs.run_index || '1' }}
   TARGET_ENVIRONMENT: ${{ github.event.inputs.target_environment || 'local' }}
   UPDATE_VISUAL_BASELINE: ${{ github.event.inputs.update_visual_baseline || 'false' }}
+  # The mobile jobs install the OmniPizza app under test by downloading it from
+  # this repo's latest GitHub release (resolved by the resolve-omnipizza-release
+  # job), so CI never needs the (untracked) binaries committed. Mirrors the TOM
+  # reference so both arms exercise the same published build.
+  OMNIPIZZA_RELEASES_REPO: gsanchezm/OmniPizza
 
 # Allow multiple experiment runs to proceed in parallel (do NOT cancel
 # in-progress runs; each run_index is a distinct data point).
@@ -81,6 +86,42 @@ permissions:
   contents: read
 
 jobs:
+  # -------------------------------------------------------------------------
+  # 0. Resolve the latest OmniPizza release (mobile app source)
+  # Queries GitHub's /releases/latest for the OmniPizza repo and exposes the tag
+  # + download base URL as outputs. The appium-ios / appium-android jobs consume
+  # these via needs.resolve-omnipizza-release.outputs.* so the app under test is
+  # always the latest published build — no committed binaries, no per-release edit.
+  # -------------------------------------------------------------------------
+  resolve-omnipizza-release:
+    name: Resolve — OmniPizza latest release
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.fetch.outputs.tag }}
+      base_url: ${{ steps.fetch.outputs.base_url }}
+    steps:
+      - name: Fetch latest release tag
+        id: fetch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG=$(curl -fsSL \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${OMNIPIZZA_RELEASES_REPO}/releases/latest" \
+            | jq -r .tag_name)
+          if [ -z "$TAG" ] || [ "$TAG" = "null" ]; then
+            echo "Failed to resolve latest OmniPizza release tag."
+            exit 1
+          fi
+          BASE_URL="https://github.com/${OMNIPIZZA_RELEASES_REPO}/releases/download/${TAG}"
+          echo "Resolved OmniPizza release: $TAG"
+          echo "Download base URL: $BASE_URL"
+          echo "tag=$TAG"           >> "$GITHUB_OUTPUT"
+          echo "base_url=$BASE_URL" >> "$GITHUB_OUTPUT"
+
   # -------------------------------------------------------------------------
   # 1. Playwright web (desktop + responsive)
   # -------------------------------------------------------------------------
@@ -135,6 +176,7 @@ jobs:
     # target self-hosted / real devices; in that case swap runs-on for a
     # self-hosted label (e.g. [self-hosted, macos, ios]).
     runs-on: macos-14
+    needs: resolve-omnipizza-release
     env:
       TOOL_NAME: appium-ios
       GTAA_PLATFORM: ios
@@ -146,17 +188,49 @@ jobs:
       - name: Setup + manifest
         uses: ./.github/actions/setup-and-manifest
 
-      # ---- iOS simulator setup (tolerant scaffold) -------------------------
-      # On GitHub-hosted macOS runners, Xcode + simulators are preinstalled.
-      # Boot a simulator so Appium has a target. On real-device / self-hosted
-      # runners this step is a no-op friendly placeholder.
+      # ---- Install the OmniPizza app from the latest release ---------------
+      - name: Download iOS simulator app
+        env:
+          OMNIPIZZA_RELEASE_BASE_URL: ${{ needs.resolve-omnipizza-release.outputs.base_url }}
+          OMNIPIZZA_RELEASE_TAG: ${{ needs.resolve-omnipizza-release.outputs.tag }}
+        run: |
+          mkdir -p assets/apps/ios
+          echo "Downloading OmniPizza iOS simulator bundle from release ${OMNIPIZZA_RELEASE_TAG}"
+          curl -fL "$OMNIPIZZA_RELEASE_BASE_URL/OmniPizza-Simulator.zip" \
+            -o assets/apps/ios/OmniPizza-Simulator.zip
+          ls -lh assets/apps/ios/OmniPizza-Simulator.zip
+        shell: bash
+
+      - name: Unpack iOS simulator app
+        run: |
+          rm -rf assets/apps/ios/unpacked
+          mkdir -p assets/apps/ios/unpacked
+          unzip -q assets/apps/ios/OmniPizza-Simulator.zip -d assets/apps/ios/unpacked
+          IOS_APP_PATH=$(find assets/apps/ios/unpacked -maxdepth 3 -name '*.app' -type d | head -n 1)
+          if [ -z "$IOS_APP_PATH" ]; then
+            echo "No .app bundle found inside OmniPizza-Simulator.zip"; exit 1
+          fi
+          echo "IOS_APP_PATH=$IOS_APP_PATH" >> "$GITHUB_ENV"
+          echo "Resolved IOS_APP_PATH=$IOS_APP_PATH"
+        shell: bash
+
+      # ---- iOS simulator setup ---------------------------------------------
+      # Select an available iPhone simulator, export its name so the executor
+      # (appium:deviceName = IOS_DEVICE_NAME) targets exactly it, then boot it so
+      # Appium/WebDriverAgent have a ready target.
       - name: Boot iOS simulator
         run: |
-          # List available simulators (informational).
           xcrun simctl list devices available || true
-          # Best-effort boot of an iPhone simulator; ignore if unavailable.
-          DEVICE_ID=$(xcrun simctl list devices available | grep -m1 -oE "iPhone[^()]*\(([0-9A-Fa-f-]+)\)" | grep -oE "[0-9A-Fa-f-]{36}") || true
-          if [ -n "$DEVICE_ID" ]; then xcrun simctl boot "$DEVICE_ID" || true; fi
+          DEVICE_LINE=$(xcrun simctl list devices available | grep -E 'iPhone .*\([A-F0-9-]+\) \((Shutdown|Booted)\)' | head -n 1)
+          if [ -z "$DEVICE_LINE" ]; then
+            echo "No available iPhone simulator found"; exit 1
+          fi
+          IOS_DEVICE_NAME=$(echo "$DEVICE_LINE" | sed -E 's/^[[:space:]]*([^()]+)[[:space:]]+\(.*/\1/' | xargs)
+          IOS_UDID=$(echo "$DEVICE_LINE" | sed -E 's/.*\(([A-F0-9-]+)\).*/\1/')
+          echo "IOS_DEVICE_NAME=$IOS_DEVICE_NAME" >> "$GITHUB_ENV"
+          echo "Selected simulator: $IOS_DEVICE_NAME ($IOS_UDID)"
+          xcrun simctl boot "$IOS_UDID" || true
+          xcrun simctl bootstatus "$IOS_UDID" -b || true
         shell: bash
 
       # Start Appium server in the background (tolerant). Real-device labs may
@@ -195,6 +269,7 @@ jobs:
     # ubuntu-latest GitHub-hosted runners. Swap for a self-hosted label to run
     # against a real-device lab (e.g. [self-hosted, android]).
     runs-on: ubuntu-latest
+    needs: resolve-omnipizza-release
     env:
       TOOL_NAME: appium-android
       GTAA_PLATFORM: android
@@ -218,6 +293,20 @@ jobs:
 
       - name: Setup + manifest
         uses: ./.github/actions/setup-and-manifest
+
+      # ---- Install the OmniPizza app from the latest release ---------------
+      - name: Download Android app (APK) from release
+        env:
+          OMNIPIZZA_RELEASE_BASE_URL: ${{ needs.resolve-omnipizza-release.outputs.base_url }}
+          OMNIPIZZA_RELEASE_TAG: ${{ needs.resolve-omnipizza-release.outputs.tag }}
+        run: |
+          mkdir -p assets/apps/android
+          echo "Downloading OmniPizza Android APK from release ${OMNIPIZZA_RELEASE_TAG}"
+          curl -fL "$OMNIPIZZA_RELEASE_BASE_URL/omnipizza-release.apk" \
+            -o assets/apps/android/app-release.apk
+          ls -lh assets/apps/android/app-release.apk
+          echo "ANDROID_APP_PATH=assets/apps/android/app-release.apk" >> "$GITHUB_ENV"
+        shell: bash
 
       - name: Start Appium server
         run: |
