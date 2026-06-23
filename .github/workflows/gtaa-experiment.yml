@@ -132,6 +132,11 @@ jobs:
       TOOL_NAME: playwright
       GTAA_PLATFORM: web
       GTAA_DRIVER: playwright
+      # The suites run against the live OmniPizza app; without these the executor
+      # falls back to localhost and every navigate/login fails (a green job via
+      # `|| true` but 0 passing scenarios). Wired from repo secrets, like TOM.
+      BASE_URL: ${{ secrets.BASE_URL }}
+      API_BASE_URL: ${{ secrets.API_BASE_URL }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -181,6 +186,10 @@ jobs:
       TOOL_NAME: appium-ios
       GTAA_PLATFORM: ios
       GTAA_DRIVER: appium
+      # The gTAA mobile suite's API helpers (auth token capture, catalog id lookup
+      # for the builder) call the live backend; wire it from the repo secret.
+      BASE_URL: ${{ secrets.BASE_URL }}
+      API_BASE_URL: ${{ secrets.API_BASE_URL }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -288,6 +297,9 @@ jobs:
       TOOL_NAME: appium-android
       GTAA_PLATFORM: android
       GTAA_DRIVER: appium
+      # The gTAA mobile suite's API helpers call the live backend; wire from secret.
+      BASE_URL: ${{ secrets.BASE_URL }}
+      API_BASE_URL: ${{ secrets.API_BASE_URL }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -380,6 +392,9 @@ jobs:
       TOOL_NAME: api
       GTAA_PLATFORM: api
       GTAA_DRIVER: api
+      # ApiExecutor hits the live backend; without it every endpoint call fails.
+      BASE_URL: ${{ secrets.BASE_URL }}
+      API_BASE_URL: ${{ secrets.API_BASE_URL }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -421,6 +436,9 @@ jobs:
       TOOL_NAME: gatling
       GTAA_PLATFORM: perf
       GTAA_DRIVER: gatling
+      # Gatling load sims target the live backend.
+      BASE_URL: ${{ secrets.BASE_URL }}
+      API_BASE_URL: ${{ secrets.API_BASE_URL }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -459,6 +477,9 @@ jobs:
       TOOL_NAME: pixelmatch
       GTAA_PLATFORM: web
       GTAA_DRIVER: pixelmatch
+      # Visual suites drive the live web app, then compare against baselines.
+      BASE_URL: ${{ secrets.BASE_URL }}
+      API_BASE_URL: ${{ secrets.API_BASE_URL }}
       GTAA_VISUAL: "true"
     steps:
       - name: Checkout
