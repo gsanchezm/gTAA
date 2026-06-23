@@ -447,7 +447,12 @@ export async function safeTap(
   // form-submitting submit-blur step is reached, so login is not pre-submitted.
   if (platform === 'ios' && session.isKeyboardShown) {
     try {
-      if (await session.isKeyboardShown()) {
+      // Only when the keyboard is up AND it is actually covering this target. After
+      // typing in a search/filter box the keyboard is up but the next tap target is
+      // usually still reachable — firing the (swipe-heavy) clear there would add
+      // latency for nothing. Gating on !isDisplayed confines the proactive clear to
+      // the genuinely-covered case (save/payment buttons).
+      if ((await session.isKeyboardShown()) && !(await isDisplayed(session, selector))) {
         await scrollIntoView(session, selector, platform);
       }
     } catch {
