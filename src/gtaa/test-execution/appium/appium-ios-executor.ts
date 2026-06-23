@@ -88,14 +88,29 @@ export class AppiumIosExecutor extends AppiumExecutorBase {
    */
   protected async afterStart(): Promise<void> {
     const session = this.session;
-    if (!session?.updateSettings) return;
-    try {
-      await session.updateSettings({
-        customSnapshotTimeout: 60,
-        useJSONSource: true,
-      });
-    } catch {
-      // Best-effort tuning; waitForIdleTimeout:0 (a capability) already applies.
+    if (!session) return;
+    if (session.updateSettings) {
+      try {
+        await session.updateSettings({
+          customSnapshotTimeout: 60,
+          useJSONSource: true,
+        });
+      } catch {
+        // Best-effort tuning; waitForIdleTimeout:0 (a capability) already applies.
+      }
+    }
+    // Clear any stray system alert left on the simulator (a SpringBoard "Open in
+    // app?" deep-link confirmation survives the per-scenario app reset and would
+    // otherwise overlay the next scenario's screen, blocking every tap). Accepting
+    // at session start — before any interaction — cannot swallow a mid-scenario
+    // dialog a step asserts on, so it is safe and self-heals the suite against this
+    // bleed. No-op (throws, swallowed) when there is no alert, which is the norm.
+    if (session.acceptAlert) {
+      try {
+        await session.acceptAlert();
+      } catch {
+        // No alert present (the common case) — nothing to clear.
+      }
     }
   }
 }

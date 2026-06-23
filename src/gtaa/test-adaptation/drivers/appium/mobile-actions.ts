@@ -37,6 +37,9 @@ export type MobileSession = {
   getWindowSize?(): Promise<{ width: number; height: number }>;
   /** Apply driver settings at runtime (e.g. XCUITest snapshot/idle tuning). */
   updateSettings?(settings: Record<string, unknown>): Promise<void>;
+  /** Accept a pending system alert (e.g. iOS "Open in app?" deep-link confirmation).
+   *  Throws when no alert is present; callers swallow that. */
+  acceptAlert?(): Promise<void>;
   takeScreenshot(): Promise<string>;
 };
 

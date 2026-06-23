@@ -240,10 +240,23 @@ export abstract class AppiumExecutorBase implements UiDriver {
           ? { url, bundleId: AUT_IOS_BUNDLE_ID }
           : undefined;
     if (!args) return;
+    const session = this.requireSession();
     try {
-      await this.requireSession().execute('mobile: deepLink', args);
+      await session.execute('mobile: deepLink', args);
     } catch {
       // Best-effort: never fail navigation on a deep link.
+    }
+    // Defensive: XCUITest's mobile:deepLink does not pop the SpringBoard "Open in
+    // app?" confirmation here (verified), but iOS versions differ — accept any
+    // confirmation the scheme launch may raise so it cannot overlay and block the
+    // current scenario's next tap. No-op (throws, swallowed) when none appears.
+    if (this.platformKind === 'ios' && session.acceptAlert) {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      try {
+        await session.acceptAlert();
+      } catch {
+        // No confirmation dialog appeared — the normal case.
+      }
     }
   }
 
