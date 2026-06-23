@@ -181,10 +181,6 @@ jobs:
       TOOL_NAME: appium-ios
       GTAA_PLATFORM: ios
       GTAA_DRIVER: appium
-      # Stable derived-data path so WebDriverAgent is built ONCE and reused across
-      # the per-scenario sessions (incremental, near-instant after the first). The
-      # warm-up step below pays the cold build outside cucumber's 120s step budget.
-      IOS_WDA_DERIVED_DATA_PATH: ${{ runner.temp }}/gtaa-wda
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -245,6 +241,10 @@ jobs:
       - name: Run iOS tests
         run: |
           mkdir -p results
+          # Stable derived-data path so WebDriverAgent is built ONCE (by the warm-up
+          # below) and reused across the per-scenario sessions. Set here, not in the
+          # job env, because the `runner` context is not available at job-env level.
+          export IOS_WDA_DERIVED_DATA_PATH="$RUNNER_TEMP/gtaa-wda"
           pnpm exec appium --base-path / > results/appium-ios-server.log 2>&1 &
           APPIUM_PID=$!
           for i in $(seq 1 60); do
