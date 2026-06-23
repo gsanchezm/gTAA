@@ -306,15 +306,17 @@ jobs:
 
       - name: Enable KVM (Android emulator acceleration)
         run: |
-          # Grant the runner access to /dev/kvm so the emulator can use HW
-          # acceleration. The udev match key below is assembled from a variable
-          # purely so this file contains no reserved architecture vocabulary;
-          # the resulting rule is the standard kvm4all udev rule.
-          MATCH_KEY="K""ERNEL"
-          printf '%s\n' "${MATCH_KEY}==\"kvm\", GROUP=\"kvm\", MODE=\"0666\", OPTIONS+=\"static_node=kvm\"" \
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
             | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules || true
           sudo udevadm trigger --name-match=kvm || true
+        shell: bash
+
+      - name: Install Android platform tools (adb)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y android-sdk-platform-tools
+          adb version
         shell: bash
 
       - name: Setup + manifest
@@ -334,37 +336,57 @@ jobs:
           echo "ANDROID_APP_PATH=assets/apps/android/app-release.apk" >> "$GITHUB_ENV"
         shell: bash
 
-      # reactivecircus/android-emulator-runner boots an emulator and runs the
-      # given script once it is ready. Appium is started INSIDE that script (via
-      # the project-local `pnpm exec appium`, not a bare `appium` that is not on
-      # PATH) so the server and the tests share one context with the live emulator.
-      # Tolerant: if the emulator cannot start, the fallback step still collects
-      # metrics. continue-on-error keeps the metrics + upload stages reachable.
-      - name: Run Android tests on emulator
-        id: android_emulator
+      # ---- Boot a Dockerized Android emulator (mirrors the TOM reference) -----
+      # halimqarroum/docker-android runs the emulator in a privileged KVM
+      # container; host adb connects to it on localhost:5555. This is far more
+      # reliable on GitHub-hosted runners than the in-VM emulator action (which
+      # failed to boot here). Best-effort so the metrics stage stays reachable.
+      - name: Start Android emulator (docker-android)
         continue-on-error: true
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 34
-          target: google_apis
-          arch: x86_64
-          profile: pixel_6
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
-          disable-animations: true
-          script: |
-            mkdir -p results
-            pnpm exec appium --base-path / > results/appium-android-server.log 2>&1 &
-            for i in $(seq 1 60); do
-              curl -fsS http://127.0.0.1:4723/status >/dev/null 2>&1 && { echo "Appium ready"; break; }
-              sleep 1
-            done
-            pnpm test:android || true
+        run: |
+          docker run -d \
+            --name android-emulator \
+            --privileged \
+            --device /dev/kvm \
+            -p 5554:5554 -p 5555:5555 \
+            -e API_LEVEL=33 \
+            -e IMG_TYPE=google_apis \
+            -e ARCHITECTURE=x86_64 \
+            -e DEVICE_ID=pixel \
+            -e MEMORY=4096 -e CORES=2 \
+            -e DISABLE_ANIMATION=true -e DISABLE_HIDDEN_POLICY=true -e SKIP_AUTH=1 \
+            halimqarroum/docker-android:api-33
+        shell: bash
 
-      # Fallback path: if the emulator action was skipped/failed, still attempt
-      # a run so the metrics pipeline has something to process.
-      - name: Run Android tests (fallback, no emulator)
-        if: steps.android_emulator.outcome != 'success'
-        run: pnpm test:android || true
+      - name: Wait for emulator to be ready
+        continue-on-error: true
+        run: |
+          adb connect localhost:5555 || true
+          for i in $(seq 1 40); do
+            if adb -s localhost:5555 shell getprop sys.boot_completed 2>/dev/null | grep -q "1"; then
+              echo "Emulator ready after $((i * 15))s"
+              break
+            fi
+            echo "  Attempt $i/40 — waiting 15s..."
+            sleep 15
+          done
+          adb devices
+        shell: bash
+
+      # Start Appium and run the suite in the SAME step (project-local
+      # `pnpm exec appium`; the background server must outlive its starting shell).
+      - name: Run Android tests
+        run: |
+          mkdir -p results
+          pnpm exec appium --base-path / > results/appium-android-server.log 2>&1 &
+          APPIUM_PID=$!
+          for i in $(seq 1 60); do
+            curl -fsS http://127.0.0.1:4723/status >/dev/null 2>&1 && { echo "Appium ready"; break; }
+            sleep 1
+          done
+          pnpm test:android || true
+          kill "$APPIUM_PID" 2>/dev/null || true
+        shell: bash
 
       - name: Collect + normalize metrics
         if: always()
