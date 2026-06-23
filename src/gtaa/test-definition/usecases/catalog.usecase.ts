@@ -33,6 +33,11 @@ const REF = {
   categoryList: 'catalog.categoryList',
   pizzaCardList: 'catalog.pizzaCardList',
   pizzaBuilderScreen: 'pizzaBuilder.pizzaBuilderScreen',
+  // Builder-only leaf used to assert "the builder is displayed" on native mobile:
+  // the ~screen-pizza-builder container is an accessible=false RN view that reports
+  // isDisplayed=false even when the modal is open, whereas this title text reports
+  // true only when the modal actually rendered (and is absent on the catalog).
+  builderTitleText: 'pizzaBuilder.builderTitleText',
 } as const;
 
 const DOMAIN = 'catalog';
@@ -292,7 +297,14 @@ export class CatalogUseCase {
       return;
     }
     const ui = await this.world.ui();
-    if (!(await ui.isVisible(REF.pizzaBuilderScreen))) {
+    // Web: the modal container's visibility is reliable. Native mobile: assert a
+    // builder-only LEAF (the title) instead — the ~screen-pizza-builder container
+    // reports isDisplayed=false even when open (RN accessible=false wrapper), so a
+    // strict container check is a false negative. The title is displayed only when
+    // the modal actually rendered (it does not exist on the catalog screen), so this
+    // stays a strict, non-existence check that cannot pass on a phantom.
+    const ref = isWebPlatform(this.world) ? REF.pizzaBuilderScreen : REF.builderTitleText;
+    if (!(await ui.isVisible(ref))) {
       throw new ClassifiedError(
         FailureBucket.ASSERTION_FAILURE,
         `expected the pizza builder to be displayed for "${item}"`,
