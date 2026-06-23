@@ -181,6 +181,10 @@ jobs:
       TOOL_NAME: appium-ios
       GTAA_PLATFORM: ios
       GTAA_DRIVER: appium
+      # Stable derived-data path so WebDriverAgent is built ONCE and reused across
+      # the per-scenario sessions (incremental, near-instant after the first). The
+      # warm-up step below pays the cold build outside cucumber's 120s step budget.
+      IOS_WDA_DERIVED_DATA_PATH: ${{ runner.temp }}/gtaa-wda
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -233,16 +237,26 @@ jobs:
           xcrun simctl bootstatus "$IOS_UDID" -b || true
         shell: bash
 
-      # Start Appium server in the background (tolerant). Real-device labs may
-      # provide their own Appium grid; this is a local convenience default.
-      - name: Start Appium server
-        run: |
-          pnpm exec appium --version || npm i -g appium || true
-          (appium > results/appium-ios-server.log 2>&1 &) || true
-        shell: bash
-
+      # Start Appium and run the suite in the SAME step so the background server
+      # stays alive for the test process. The project-local binary must be launched
+      # via `pnpm exec appium` (bare `appium` is not on the runner PATH — a prior
+      # `(appium &)` launched nothing, so every session got ECONNREFUSED at :4723).
+      # --base-path / matches the executor's connection path.
       - name: Run iOS tests
-        run: pnpm test:ios || true
+        run: |
+          mkdir -p results
+          pnpm exec appium --base-path / > results/appium-ios-server.log 2>&1 &
+          APPIUM_PID=$!
+          for i in $(seq 1 60); do
+            curl -fsS http://127.0.0.1:4723/status >/dev/null 2>&1 && { echo "Appium ready"; break; }
+            sleep 1
+          done
+          # Build WebDriverAgent once, outside cucumber's 120s per-step budget, so
+          # the first scenario reuses it instead of timing out on the cold build.
+          node scripts/ci/warm-wda.mjs || true
+          pnpm test:ios || true
+          kill "$APPIUM_PID" 2>/dev/null || true
+        shell: bash
 
       - name: Collect + normalize metrics
         if: always()
@@ -308,16 +322,11 @@ jobs:
           echo "ANDROID_APP_PATH=assets/apps/android/app-release.apk" >> "$GITHUB_ENV"
         shell: bash
 
-      - name: Start Appium server
-        run: |
-          pnpm exec appium --version || npm i -g appium || true
-          mkdir -p results
-          (appium > results/appium-android-server.log 2>&1 &) || true
-        shell: bash
-
       # reactivecircus/android-emulator-runner boots an emulator and runs the
-      # given script inside it. Tolerant: if the emulator cannot start (e.g.
-      # on self-hosted real-device runners), the fallback step still collects
+      # given script once it is ready. Appium is started INSIDE that script (via
+      # the project-local `pnpm exec appium`, not a bare `appium` that is not on
+      # PATH) so the server and the tests share one context with the live emulator.
+      # Tolerant: if the emulator cannot start, the fallback step still collects
       # metrics. continue-on-error keeps the metrics + upload stages reachable.
       - name: Run Android tests on emulator
         id: android_emulator
@@ -330,7 +339,14 @@ jobs:
           profile: pixel_6
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           disable-animations: true
-          script: pnpm test:android || true
+          script: |
+            mkdir -p results
+            pnpm exec appium --base-path / > results/appium-android-server.log 2>&1 &
+            for i in $(seq 1 60); do
+              curl -fsS http://127.0.0.1:4723/status >/dev/null 2>&1 && { echo "Appium ready"; break; }
+              sleep 1
+            done
+            pnpm test:android || true
 
       # Fallback path: if the emulator action was skipped/failed, still attempt
       # a run so the metrics pipeline has something to process.
