@@ -372,14 +372,37 @@ export abstract class AppiumExecutorBase implements UiDriver {
   }
 
   /**
-   * Dismiss the native "Profile saved" AlertDialog OmniPizza pops after a save.
-   * Android-only: the `android:id/button1` selector is invalid on iOS (it crashes
-   * the plugin session), so it is gated on the android platform; best-effort and
-   * never throws so a missing dialog cannot fail the flow.
+   * Dismiss the native "Profile saved" alert OmniPizza pops after a save. Left
+   * open it overlays the form, so the post-save inputs-visible assertion reads
+   * every field as not-displayed. Best-effort and never throws so a missing dialog
+   * cannot fail the flow.
+   *  - Android: tap the AlertDialog's OK button (`android:id/button1`).
+   *  - iOS: accept the native XCUIElementTypeAlert. (The Android selector is an
+   *    invalid locator strategy on iOS and would crash the session, so the two
+   *    paths are kept separate.)
    */
   async dismissNativeDialog(): Promise<void> {
-    if (this.platformKind !== 'android') return;
-    await dismissNativeAlert(this.requireSession());
+    if (this.platformKind === 'android') {
+      await dismissNativeAlert(this.requireSession());
+      return;
+    }
+    if (this.platformKind === 'ios') {
+      const session = this.requireSession() as unknown as {
+        acceptAlert?: () => Promise<void>;
+      };
+      if (!session.acceptAlert) return;
+      // The alert can appear a beat after the save round-trip, so poll briefly:
+      // acceptAlert throws when no alert is open yet — retry until it succeeds or
+      // the budget runs out. Stops as soon as one accept lands.
+      for (let attempt = 0; attempt < 10; attempt += 1) {
+        try {
+          await session.acceptAlert();
+          return;
+        } catch {
+          await new Promise((resolve) => setTimeout(resolve, 300));
+        }
+      }
+    }
   }
 
   // ---- helpers -------------------------------------------------------------

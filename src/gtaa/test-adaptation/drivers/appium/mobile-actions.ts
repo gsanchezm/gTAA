@@ -29,6 +29,9 @@ import { ClassifiedError, FailureBucket } from '../../../shared/failure-buckets'
  */
 export type MobileSession = {
   $(selector: string): Promise<MobileElement>;
+  /** Find all elements matching the selector (e.g. to pick the last single-line
+   *  text field for submit-to-blur). */
+  $$?(selector: string): Promise<MobileElement[]>;
   isKeyboardShown?(): Promise<boolean>;
   hideKeyboard?(): Promise<void>;
   /** Execute a mobile: command (e.g. 'mobile: swipe', 'mobile: scrollGesture'). */
@@ -40,6 +43,9 @@ export type MobileSession = {
   /** Accept a pending system alert (e.g. iOS "Open in app?" deep-link confirmation).
    *  Throws when no alert is present; callers swallow that. */
   acceptAlert?(): Promise<void>;
+  /** Send key events to the focused element (e.g. ['Return'] to submit/blur a
+   *  single-line input, which dismisses the iOS keyboard for RN forms). */
+  keys?(value: string[]): Promise<void>;
   takeScreenshot(): Promise<string>;
 };
 
@@ -237,6 +243,18 @@ export async function scrollIntoView(
       }
       return;
     }
+    // iOS: the most common reason a button (payment, save-profile) is not hittable
+    // on a form screen is that the soft keyboard raised by the preceding text entry
+    // is covering it — not that it is below the fold. Try the cheap neutral-tap
+    // dismiss first; if the target is still covered, blur via submit (the only
+    // method that drops the keyboard on keyboardShouldPersistTaps forms). This runs
+    // only here — when a control is already known to be unreachable — so the
+    // submit's Return cannot fire during plain login typing. Finally, fall back to
+    // a gesture swipe for genuinely below-the-fold targets.
+    await dismissKeyboard(session, 'ios');
+    if (await isDisplayed(session, selector)) return;
+    await submitToBlur(session);
+    if (await isDisplayed(session, selector)) return;
     await swipeUntilDisplayed(session, selector);
   } catch {
     // Non-fatal: leave it to the explicit wait / interaction to classify.
@@ -334,6 +352,12 @@ export async function dismissKeyboard(
   if (platform === 'ios') {
     try {
       if (session.isKeyboardShown && !(await session.isKeyboardShown())) return;
+      // Neutral tap: works on screens whose ScrollView allows tap-to-blur (e.g. the
+      // login screen) — a tap outside the inputs blurs them. Screens that use
+      // keyboardShouldPersistTaps (profile, checkout) ignore it; their covered tap
+      // targets are handled by submitToBlur() inside scrollIntoView, which is gated
+      // on an actual covered control so it never fires during plain login typing
+      // (where a Return would prematurely submit the form).
       const size = session.getWindowSize ? await session.getWindowSize() : undefined;
       if (size) {
         await session.execute('mobile: tap', {
@@ -353,6 +377,52 @@ export async function dismissKeyboard(
     }
   } catch {
     // Keyboard dismissal is best-effort; never propagate.
+  }
+}
+
+/**
+ * iOS keyboard dismissal via submit-to-blur (last resort for keyboardShouldPersistTaps
+ * forms). Focuses the first single-line text field (XCUIElementTypeTextField; a
+ * multiline field is a TextView, whose Return inserts a newline instead of
+ * submitting) and sends Return, firing RN's onSubmitEditing -> blur, which drops the
+ * keyboard when neutral-tap/hideKeyboard/swipe all fail. ONLY safe to call when a
+ * control is genuinely covered (from scrollIntoView) — NOT during plain login
+ * typing, where a Return would submit the login form prematurely. Best-effort.
+ */
+async function submitToBlur(session: MobileSession): Promise<void> {
+  try {
+    if (session.isKeyboardShown && !(await session.isKeyboardShown())) return;
+    if (!session.keys || !session.$$) return;
+    const stillShown = async (): Promise<boolean> =>
+      session.isKeyboardShown ? await session.isKeyboardShown() : true;
+    // Focus a single-line field and send Return -> RN onSubmitEditing -> blur, which
+    // drops the keyboard. Return only blurs a "done"/"go" field (earlier fields are
+    // usually "next", which just advances focus), so try the displayed single-line
+    // fields from last to first and stop when the keyboard drops. Timing matters:
+    // let the focus settle after the click and let the blur process after Return
+    // before re-checking, or the keyboard state reads stale (verified — without the
+    // waits the dismissal silently no-ops).
+    const fields = await session.$$('-ios class chain:**/XCUIElementTypeTextField');
+    for (let i = fields.length - 1; i >= 0; i -= 1) {
+      let shown = false;
+      try {
+        shown = await fields[i].isDisplayed();
+      } catch {
+        shown = false;
+      }
+      if (!shown) continue;
+      try {
+        await fields[i].click();
+        await sleep(500);
+        await session.keys(['Return']);
+        await sleep(1000);
+        if (!(await stillShown())) return;
+      } catch {
+        // Try the next displayed field.
+      }
+    }
+  } catch {
+    // No single-line field reachable / keys unsupported — leave it to the swipe.
   }
 }
 
