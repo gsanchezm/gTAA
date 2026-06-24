@@ -146,7 +146,7 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps || pnpm exec playwright install || true
       - name: Run web tests (desktop)
-        run: pnpm test:web:desktop || true
+        run: pnpm test:web:desktop
       - name: Collect + normalize metrics
         if: always()
         run: pnpm metrics:all
@@ -182,7 +182,7 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps || pnpm exec playwright install || true
       - name: Run web tests (responsive)
-        run: pnpm test:web:responsive || true
+        run: pnpm test:web:responsive
       - name: Collect + normalize metrics
         if: always()
         run: pnpm metrics:all
@@ -292,8 +292,14 @@ jobs:
           # Build WebDriverAgent once, outside cucumber's 120s per-step budget, so
           # the first scenario reuses it instead of timing out on the cold build.
           node scripts/ci/warm-wda.mjs || true
-          pnpm test:ios || true
+          # Run the suite WITHOUT `|| true` so the job's red/green reflects the real
+          # result (no false positives). Capture its exit code, stop Appium, then
+          # exit with it. Metrics/upload still run via their `if: always()` steps.
+          set +e
+          pnpm test:ios
+          TEST_EXIT=$?
           kill "$APPIUM_PID" 2>/dev/null || true
+          exit $TEST_EXIT
         shell: bash
 
       - name: Collect + normalize metrics
@@ -414,8 +420,13 @@ jobs:
             curl -fsS http://127.0.0.1:4723/status >/dev/null 2>&1 && { echo "Appium ready"; break; }
             sleep 1
           done
-          pnpm test:android || true
+          # No `|| true`: the job's red/green reflects the real result. Capture the
+          # exit code, stop Appium, exit with it; metrics/upload run via if: always().
+          set +e
+          pnpm test:android
+          TEST_EXIT=$?
           kill "$APPIUM_PID" 2>/dev/null || true
+          exit $TEST_EXIT
         shell: bash
 
       - name: Collect + normalize metrics
@@ -460,7 +471,7 @@ jobs:
       #   API_BASE_URL: ${{ secrets.API_BASE_URL }}
       #   API_TOKEN: ${{ secrets.API_TOKEN }}
       - name: Run API tests
-        run: pnpm test:api || true
+        run: pnpm test:api
 
       - name: Collect + normalize metrics
         if: always()
@@ -542,7 +553,7 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps || pnpm exec playwright install || true
       - name: Run visual tests (desktop)
-        run: pnpm test:visual:desktop || true
+        run: pnpm test:visual:desktop
       - name: Collect + normalize metrics
         if: always()
         run: pnpm metrics:all
@@ -580,7 +591,7 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps || pnpm exec playwright install || true
       - name: Run visual tests (responsive)
-        run: pnpm test:visual:responsive || true
+        run: pnpm test:visual:responsive
       - name: Collect + normalize metrics
         if: always()
         run: pnpm metrics:all
