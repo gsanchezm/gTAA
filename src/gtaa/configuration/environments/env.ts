@@ -91,7 +91,7 @@ export function mobileConfig(): MobileConfig {
   return {
     appiumHost: str('APPIUM_HOST', '127.0.0.1'),
     appiumPort: num('APPIUM_PORT', 4723),
-    timeoutMs: num('MOBILE_TIMEOUT_MS', 30000),
+    timeoutMs: num('MOBILE_TIMEOUT_MS', 60000),
     android: {
       appPath: str('ANDROID_APP_PATH'),
       deviceName: str('ANDROID_DEVICE_NAME', 'Android Emulator'),

@@ -123,13 +123,14 @@ jobs:
           echo "base_url=$BASE_URL" >> "$GITHUB_OUTPUT"
 
   # -------------------------------------------------------------------------
-  # 1. Playwright web (desktop + responsive)
+  # 1a. Playwright web — Desktop. Split from Responsive (and chained into the
+  # visual jobs) so the pipeline graph mirrors the TOM reference's DAG.
   # -------------------------------------------------------------------------
-  playwright:
-    name: Playwright (web desktop + responsive)
+  playwright-desktop:
+    name: Playwright — Desktop
     runs-on: ubuntu-latest
     env:
-      TOOL_NAME: playwright
+      TOOL_NAME: playwright-desktop
       GTAA_PLATFORM: web
       GTAA_DRIVER: playwright
       # The suites run against the live OmniPizza app; without these the executor
@@ -140,31 +141,56 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup + manifest
         uses: ./.github/actions/setup-and-manifest
-
-      # Install Playwright browsers; tolerant so metrics still run if it fails.
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps || pnpm exec playwright install || true
-
-      # Run BOTH desktop and responsive web suites. Resilient: execution may
-      # have no live app in CI, so failures must not abort the metrics stage.
       - name: Run web tests (desktop)
         run: pnpm test:web:desktop || true
-
-      - name: Run web tests (responsive)
-        run: pnpm test:web:responsive || true
-
       - name: Collect + normalize metrics
         if: always()
         run: pnpm metrics:all
-
       - name: Upload metrics artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: gtaa-metrics-playwright
+          name: gtaa-metrics-playwright-desktop
+          path: |
+            metrics/raw/**
+            metrics/processed/**
+            results/**
+          if-no-files-found: warn
+          retention-days: 30
+
+  # -------------------------------------------------------------------------
+  # 1b. Playwright web — Responsive
+  # -------------------------------------------------------------------------
+  playwright-responsive:
+    name: Playwright — Responsive
+    runs-on: ubuntu-latest
+    env:
+      TOOL_NAME: playwright-responsive
+      GTAA_PLATFORM: web
+      GTAA_DRIVER: playwright
+      BASE_URL: ${{ secrets.BASE_URL }}
+      API_BASE_URL: ${{ secrets.API_BASE_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup + manifest
+        uses: ./.github/actions/setup-and-manifest
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps || pnpm exec playwright install || true
+      - name: Run web tests (responsive)
+        run: pnpm test:web:responsive || true
+      - name: Collect + normalize metrics
+        if: always()
+        run: pnpm metrics:all
+      - name: Upload metrics artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gtaa-metrics-playwright-responsive
           path: |
             metrics/raw/**
             metrics/processed/**
@@ -181,7 +207,7 @@ jobs:
     # target self-hosted / real devices; in that case swap runs-on for a
     # self-hosted label (e.g. [self-hosted, macos, ios]).
     runs-on: macos-14
-    needs: resolve-omnipizza-release
+    needs: [resolve-omnipizza-release, playwright-responsive]
     env:
       TOOL_NAME: appium-ios
       GTAA_PLATFORM: ios
@@ -254,6 +280,9 @@ jobs:
           # below) and reused across the per-scenario sessions. Set here, not in the
           # job env, because the `runner` context is not available at job-env level.
           export IOS_WDA_DERIVED_DATA_PATH="$RUNNER_TEMP/gtaa-wda"
+          # Warm the Render backend so its cold-start latency doesn't push the
+          # first scenarios' element waits past the timeout.
+          for i in 1 2 3 4 5; do curl -fsS -m 30 "$API_BASE_URL" >/dev/null 2>&1 && break; sleep 2; done
           pnpm exec appium --base-path / > results/appium-ios-server.log 2>&1 &
           APPIUM_PID=$!
           for i in $(seq 1 60); do
@@ -292,7 +321,7 @@ jobs:
     # ubuntu-latest GitHub-hosted runners. Swap for a self-hosted label to run
     # against a real-device lab (e.g. [self-hosted, android]).
     runs-on: ubuntu-latest
-    needs: resolve-omnipizza-release
+    needs: [resolve-omnipizza-release, playwright-responsive]
     env:
       TOOL_NAME: appium-android
       GTAA_PLATFORM: android
@@ -378,6 +407,7 @@ jobs:
       - name: Run Android tests
         run: |
           mkdir -p results
+          for i in 1 2 3 4 5; do curl -fsS -m 30 "$API_BASE_URL" >/dev/null 2>&1 && break; sleep 2; done
           pnpm exec appium --base-path / > results/appium-android-server.log 2>&1 &
           APPIUM_PID=$!
           for i in $(seq 1 60); do
@@ -490,46 +520,75 @@ jobs:
           retention-days: 30
 
   # -------------------------------------------------------------------------
-  # 6. Pixelmatch visual (desktop + responsive)
+  # 6a. Pixelmatch visual — Desktop. Chained after Playwright Desktop so the
+  # graph flows Playwright -> Pixelmatch -> Consolidate, mirroring TOM.
   # -------------------------------------------------------------------------
-  pixelmatch:
-    name: Pixelmatch (visual desktop + responsive)
+  pixelmatch-desktop:
+    name: Pixelmatch — Desktop
     runs-on: ubuntu-latest
+    needs: playwright-desktop
     env:
-      TOOL_NAME: pixelmatch
+      TOOL_NAME: pixelmatch-desktop
       GTAA_PLATFORM: web
       GTAA_DRIVER: pixelmatch
-      # Visual suites drive the live web app, then compare against baselines.
       BASE_URL: ${{ secrets.BASE_URL }}
       API_BASE_URL: ${{ secrets.API_BASE_URL }}
       GTAA_VISUAL: "true"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup + manifest
         uses: ./.github/actions/setup-and-manifest
-
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps || pnpm exec playwright install || true
-
-      # Honour the update_visual_baseline input. When true, baselines are
-      # refreshed instead of compared (the npm scripts read UPDATE_VISUAL_BASELINE).
       - name: Run visual tests (desktop)
         run: pnpm test:visual:desktop || true
-
-      - name: Run visual tests (responsive)
-        run: pnpm test:visual:responsive || true
-
       - name: Collect + normalize metrics
         if: always()
         run: pnpm metrics:all
-
       - name: Upload metrics artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: gtaa-metrics-pixelmatch
+          name: gtaa-metrics-pixelmatch-desktop
+          path: |
+            metrics/raw/**
+            metrics/processed/**
+            results/**
+          if-no-files-found: warn
+          retention-days: 30
+
+  # -------------------------------------------------------------------------
+  # 6b. Pixelmatch visual — Responsive (chained after Pixelmatch Desktop)
+  # -------------------------------------------------------------------------
+  pixelmatch-responsive:
+    name: Pixelmatch — Responsive
+    runs-on: ubuntu-latest
+    needs: pixelmatch-desktop
+    env:
+      TOOL_NAME: pixelmatch-responsive
+      GTAA_PLATFORM: web
+      GTAA_DRIVER: pixelmatch
+      BASE_URL: ${{ secrets.BASE_URL }}
+      API_BASE_URL: ${{ secrets.API_BASE_URL }}
+      GTAA_VISUAL: "true"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup + manifest
+        uses: ./.github/actions/setup-and-manifest
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps || pnpm exec playwright install || true
+      - name: Run visual tests (responsive)
+        run: pnpm test:visual:responsive || true
+      - name: Collect + normalize metrics
+        if: always()
+        run: pnpm metrics:all
+      - name: Upload metrics artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gtaa-metrics-pixelmatch-responsive
           path: |
             metrics/raw/**
             metrics/processed/**
@@ -544,12 +603,14 @@ jobs:
     name: Consolidate metrics
     runs-on: ubuntu-latest
     needs:
-      - playwright
+      - playwright-desktop
+      - playwright-responsive
+      - pixelmatch-desktop
+      - pixelmatch-responsive
       - appium-ios
       - appium-android
       - api
       - gatling
-      - pixelmatch
     if: always()
     env:
       TOOL_NAME: consolidate
