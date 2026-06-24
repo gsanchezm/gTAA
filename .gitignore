@@ -34,3 +34,7 @@ Thumbs.db
 CLAUDE.md
 
 assets/apps/android/omnipizza-release.apk
+# iOS simulator app build (local only; CI downloads it from the OmniPizza release)
+assets/apps/ios/OmniPizza.app/
+# Local iOS diagnostic scratch
+scripts/ios/warm-inspect.mjs

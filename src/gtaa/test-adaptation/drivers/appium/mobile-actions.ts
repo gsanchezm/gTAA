@@ -47,6 +47,8 @@ export type MobileSession = {
    *  single-line input, which dismisses the iOS keyboard for RN forms). */
   keys?(value: string[]): Promise<void>;
   takeScreenshot(): Promise<string>;
+  /** Native UI hierarchy dump (Appium getPageSource), for on-failure diagnostics. */
+  getPageSource?(): Promise<string>;
 };
 
 /**
@@ -270,8 +272,12 @@ export async function scrollIntoView(
 async function androidGestureScroll(
   session: MobileSession,
   selector: string,
-  maxScrolls = 6,
+  maxScrolls = 10,
 ): Promise<void> {
+  // A raised IME shrinks the scrollable viewport and can hide the very element
+  // we are scrolling to (the bottom-of-form CTAs: place-order / save-profile /
+  // card-holder). Dismiss it first; this must never fail the scroll.
+  await dismissKeyboard(session).catch(() => undefined);
   if (!session.getWindowSize) return;
   const { width, height } = await session.getWindowSize();
   const area = {
