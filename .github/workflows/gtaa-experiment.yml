@@ -557,6 +557,12 @@ jobs:
       - name: Collect + normalize metrics
         if: always()
         run: pnpm metrics:all
+      # Gate the job on visual drift (the oracle records but does not fail the
+      # scenario on drift) — mirrors TOM's visual gate so both arms apply the same
+      # pass/fail policy. Runs even if a prior step failed so drift is always shown.
+      - name: Visual gate — fail the job if any snapshot drifted
+        if: success() || failure()
+        run: pnpm exec tsx scripts/metrics/visual-gate.ts
       - name: Upload metrics artifact
         if: always()
         uses: actions/upload-artifact@v4
@@ -595,6 +601,9 @@ jobs:
       - name: Collect + normalize metrics
         if: always()
         run: pnpm metrics:all
+      - name: Visual gate — fail the job if any snapshot drifted
+        if: success() || failure()
+        run: pnpm exec tsx scripts/metrics/visual-gate.ts
       - name: Upload metrics artifact
         if: always()
         uses: actions/upload-artifact@v4
