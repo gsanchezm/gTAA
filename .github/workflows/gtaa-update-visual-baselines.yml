@@ -40,6 +40,10 @@ jobs:
       GTAA_PLATFORM: web
       GTAA_DRIVER: pixelmatch
       GTAA_VISUAL: "true"
+      # Capture the LIVE app, not localhost — otherwise the regenerated baselines
+      # are useless. The pixelmatch jobs then gate against these CI-native captures.
+      BASE_URL: ${{ secrets.BASE_URL }}
+      API_BASE_URL: ${{ secrets.API_BASE_URL }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
