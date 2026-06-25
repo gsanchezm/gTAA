@@ -73,19 +73,16 @@ jobs:
       - name: Update visual baselines (responsive)
         run: pnpm test:visual:responsive || true
 
-      # Upload the refreshed baselines for review. Adjust the path globs below
-      # to match where the visual scripts persist baseline snapshots in this
-      # repo (common locations covered).
+      # Upload the refreshed baselines for review. gTAA persists baselines under
+      # visual-baselines/<domain>/.../baseline.png — that glob MUST be present or
+      # the artifact carries only metrics and the regen is useless.
       - name: Upload updated baselines
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: gtaa-visual-baselines
           path: |
-            **/__screenshots__/**
-            **/*-snapshots/**
-            **/baselines/**
-            tests/**/visual/**
+            visual-baselines/**
             metrics/raw/**
             metrics/processed/**
             results/**
