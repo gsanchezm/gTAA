@@ -17,6 +17,7 @@ import {
   type ITestStepHookParameter,
 } from '@cucumber/cucumber';
 import { GtaaWorld } from './world';
+import { warmUpServices } from './warm-up';
 import { runIdentity } from '../../test-reporting/telemetry/run-context';
 import { emitToolEvent, writeRunManifest } from '../../test-reporting/telemetry/telemetry-writer';
 import { classifyError, errorMessage, FailureBucket } from '../../shared/failure-buckets';
@@ -24,11 +25,21 @@ import type { ExecutionStatus, TelemetryEvent } from '../../shared/types';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-BeforeAll(function () {
+BeforeAll(async function () {
   try {
     writeRunManifest();
   } catch {
     /* manifest is best-effort; never block execution */
+  }
+  // Wake the (Render free-tier) frontend + backend before the first scenario so a
+  // cold start doesn't blow a per-step wait budget (the order-success "never became
+  // visible" flake). Fully guarded: warm-up is best-effort and a rejected async
+  // BeforeAll would abort every scenario, so it must never throw out of here.
+  // Mirrors the TOM reference's BeforeAll warm-up.
+  try {
+    await warmUpServices();
+  } catch {
+    /* warm-up is best-effort; never block execution */
   }
 });
 

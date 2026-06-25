@@ -35,6 +35,16 @@ const REF = {
 const DOMAIN = 'order_success';
 
 /**
+ * Wait budget for the order-success screen to render after landing on it. Like
+ * the checkout place-order path, the free-tier backend can cold-start while the
+ * page's getOrder fetch resolves, so give the container a generous budget instead
+ * of the default explicit-wait. 90s mirrors the TOM reference's
+ * order-success-screen.molecule.ts (`orderSuccessScreen||90000`,
+ * SUCCESS_SCREEN_WAIT_MS); the BeforeAll warm-up removes most of that cost first.
+ */
+const ORDER_SUCCESS_SCREEN_WAIT_MS = 90_000;
+
+/**
  * Deterministic synthetic order id used to seed the confirmation context. There
  * is no live backend in this baseline; the value flows into the {{orderId}}
  * path template so the wiring is exercised. Held on world.state for isolation.
@@ -99,7 +109,7 @@ export class OrderSuccessUseCase {
           `&lang=${encodeURIComponent(String(this.world.state.language ?? 'en'))}`,
       );
     }
-    await ui.waitForVisible(REF.screen);
+    await ui.waitForVisible(REF.screen, ORDER_SUCCESS_SCREEN_WAIT_MS);
   }
 
   /** "the order success screen is fully displayed with status {string}". */

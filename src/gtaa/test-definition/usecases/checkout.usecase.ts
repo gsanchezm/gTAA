@@ -45,9 +45,11 @@ const DOMAIN = 'checkout';
  * Wait budget for the order-success screen after submitting an order. The free-
  * tier backend can cold-start on the first order of a run, so this is well above
  * the default explicit-wait timeout to avoid an intermittent "never became
- * visible" flake on a slow round-trip.
+ * visible" flake on a slow round-trip. 90s mirrors the TOM reference's
+ * checkout-order.molecule.ts (`orderSuccessScreen||90000`); the BeforeAll
+ * warm-up removes most of the cold-start cost before this wait is ever reached.
  */
-const ORDER_ACCEPT_TIMEOUT_MS = 60_000;
+const ORDER_ACCEPT_TIMEOUT_MS = 90_000;
 
 interface OrderDraft {
   market?: string;
