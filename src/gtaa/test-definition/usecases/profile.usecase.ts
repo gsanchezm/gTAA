@@ -148,17 +148,12 @@ export class ProfileUseCase {
       }
       return;
     }
-    const visible =
-      (await ui.isVisible(REF.fullNameInput)) &&
-      (await ui.isVisible(REF.phoneInput)) &&
-      (await ui.isVisible(REF.addressInput)) &&
-      (await ui.isVisible(REF.notesInput));
-    if (!visible) {
-      throw new ClassifiedError(
-        FailureBucket.ASSERTION_FAILURE,
-        'expected the full name, phone, address, and notes inputs to be visible',
-      );
-    }
+    // Mirror TOM's profile-view.molecule.ts: WAIT for each form input (the wait
+    // IS the presence assertion) at 8s.
+    await ui.waitForVisible(REF.fullNameInput, 8_000);
+    await ui.waitForVisible(REF.phoneInput, 8_000);
+    await ui.waitForVisible(REF.addressInput, 8_000);
+    await ui.waitForVisible(REF.notesInput, 8_000);
     // The @visual "editable and save accepted" scenario (no @ui-only) ends on
     // this step -> the post-save snapshot. The @ui-only render scenario reaches
     // this step too but its discriminator snapshot (profile_card_render) already

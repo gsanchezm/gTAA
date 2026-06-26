@@ -68,6 +68,21 @@ const delay = (ms: number): Promise<void> => new Promise((resolve) => setTimeout
 
 const DOMAIN = 'pizzaBuilder';
 
+/**
+ * Slug a topping id to a testid-safe form (mirror of the TOM reference's
+ * pizzaBuilder-toppings.molecule slugify): strip diacritics + lower-case,
+ * preserving `_` and `-` so snake-cased ids like `black_olives` match the
+ * frontend's `topping-<id>` attribute verbatim (jalapeño -> jalapeno).
+ */
+function slugify(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
 interface BuilderDraft {
   item?: string;
   market?: string;
@@ -135,28 +150,20 @@ export class PizzaBuilderUseCase {
   /** "the size options and topping options are rendered". */
   async assertOptionsRendered(): Promise<void> {
     const ui = await this.world.ui();
-    const sizes = await ui.isVisible(REF.sizeOptionsList);
-    const toppings = await ui.isVisible(REF.toppingsList);
-    if (!sizes || !toppings) {
-      throw new ClassifiedError(
-        FailureBucket.ASSERTION_FAILURE,
-        'expected the size options and topping options to be rendered',
-      );
-    }
+    // Mirror TOM's pizzaBuilder-open.molecule.ts: WAIT for each option list (the
+    // wait IS the presence assertion) at 10s.
+    await ui.waitForVisible(REF.sizeOptionsList, 10_000);
+    await ui.waitForVisible(REF.toppingsList, 10_000);
     // No pizzaBuilder snapshot matches the @ui-only render scenario's tags.
   }
 
   /** "the customizer price and confirm-add-to-cart affordance are visible". */
   async assertPriceAndConfirmVisible(): Promise<void> {
     const ui = await this.world.ui();
-    const price = await ui.isVisible(REF.priceText);
-    const confirm = await ui.isVisible(REF.confirmButton);
-    if (!price || !confirm) {
-      throw new ClassifiedError(
-        FailureBucket.ASSERTION_FAILURE,
-        'expected the customizer price and confirm-add-to-cart affordance to be visible',
-      );
-    }
+    // Mirror TOM's pizzaBuilder-open.molecule.ts: WAIT for the price + confirm CTA
+    // (the wait IS the presence assertion) at 10s.
+    await ui.waitForVisible(REF.priceText, 10_000);
+    await ui.waitForVisible(REF.confirmButton, 10_000);
   }
 
   /** "the section labels {string} and {string} are visible". */
@@ -224,8 +231,13 @@ export class PizzaBuilderUseCase {
       return; // Toppings ride along on the add-to-cart call.
     }
     const ui = await this.world.ui();
-    for (const _topping of toppings) {
-      await ui.click(REF.toppingsList);
+    // Click each topping BY NAME (mirrors selectSize's per-label ref and TOM's
+    // pizzaBuilder-toppings.molecule): the toppingByName template builds
+    // `[data-testid='topping-<slug>']` on web / `~btn-topping-<slug>` on mobile,
+    // so e.g. `mushrooms` reaches `~btn-topping-mushrooms` on Android instead of
+    // clicking the topping container N times.
+    for (const topping of toppings) {
+      await ui.click(`pizzaBuilder.toppingByName#slug=${slugify(topping)}`);
     }
   }
 

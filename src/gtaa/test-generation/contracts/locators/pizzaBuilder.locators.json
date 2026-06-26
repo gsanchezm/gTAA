@@ -70,6 +70,10 @@
       "ios": "-ios class chain:**/XCUIElementTypeOther[`name BEGINSWITH 'btn-topping-'`]"
     }
   },
+  "toppingByName": {
+    "web": "[data-testid='topping-{slug}']",
+    "mobile": "~btn-topping-{slug}"
+  },
   "toppingLabel": {
     "mobile": {
       "android": "android=new UiSelector().resourceIdMatches(\"text-topping-(?!group-).*\")",

@@ -88,12 +88,9 @@ export class CatalogUseCase {
       return;
     }
     const ui = await this.world.ui();
-    if (!(await ui.isVisible(REF.catalogScreen))) {
-      throw new ClassifiedError(
-        FailureBucket.ASSERTION_FAILURE,
-        'expected the catalog screen to be fully displayed',
-      );
-    }
+    // Mirror TOM's catalog-browse.molecule.ts: WAIT for the catalog screen (the
+    // wait IS the presence assertion) at 90s — sized for a Render cold start.
+    await ui.waitForVisible(REF.catalogScreen, 90_000);
     await runVisualCheck(this.world, DOMAIN, 'catalog_screen');
   }
 

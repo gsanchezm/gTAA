@@ -94,7 +94,10 @@ export class PlaywrightWebExecutor implements UiDriver {
   async navigate(url: string): Promise<void> {
     const page = this.requirePage();
     try {
-      await page.goto(url, { timeout: webConfig().timeoutMs });
+      // waitUntil 'domcontentloaded' mirrors the TOM reference's Navigate action
+      // (gTAA otherwise inherits Playwright's longer default 'load' — aligning down
+      // to TOM so neither arm waits longer on navigation).
+      await page.goto(url, { timeout: webConfig().timeoutMs, waitUntil: 'domcontentloaded' });
     } catch (error) {
       throw this.classify(error, FailureBucket.UI_ACTION_FAILURE, `Failed to navigate to "${url}"`);
     }

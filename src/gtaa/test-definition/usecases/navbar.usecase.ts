@@ -67,34 +67,39 @@ export class NavbarUseCase {
     this.world.state.market = market;
     this.world.state.language = language;
     const ui = await this.requireUi();
-    // WEB ONLY: seed the persisted market/language so the navbar renders the
-    // right locale (and, for CH, exposes the header language switcher) instead
-    // of US/English. Native mobile gets its market via re-login + deep link.
     if (isWebPlatform(this.world)) {
+      // WEB: prime the app origin so the seed lands there (not about:blank), seed
+      // the persisted market/language (the navbar localizes off the omnipizza-
+      // country store, NOT the URL — and for CH this is what exposes the header
+      // language switcher), then navigate to the bare catalog. Mirrors TOM's
+      // navbar-shell.molecule.ts (root -> seed -> /catalog).
+      await ui.navigate('/');
       await seedWebPersistedStores(ui, {
         market,
         language,
         token: String(this.world.state.token ?? ''),
       });
+      await ui.navigate('/catalog');
+    } else {
+      // Native mobile gets its market via re-login + a deep link carrying the
+      // market/lang params (localStorage seeding + bare routes are web-only).
+      await ui.navigate(`/catalog?market=${encodeURIComponent(market)}&lang=${encodeURIComponent(language)}`);
     }
-    await ui.navigate(`/catalog?market=${encodeURIComponent(market)}&lang=${encodeURIComponent(language)}`);
-    await ui.waitForVisible(REF.navLogo);
+    // Wait for the full catalog body (mirrors TOM's catalogScreen anchor), not
+    // just the navbar shell, so the navbar (incl. the CH switcher) is hydrated
+    // before the next step interacts with it.
+    await ui.waitForVisible(CATALOG_SCREEN);
   }
 
   /** "the navbar logo, catalog, checkout, and profile links are visible". */
   async assertDesktopLinksVisible(): Promise<void> {
     const ui = await this.requireUi();
-    const visible =
-      (await ui.isVisible(REF.navLogo)) &&
-      (await ui.isVisible(REF.navCatalogLink)) &&
-      (await ui.isVisible(REF.navCheckoutLink)) &&
-      (await ui.isVisible(REF.navProfileLink));
-    if (!visible) {
-      throw new ClassifiedError(
-        FailureBucket.ASSERTION_FAILURE,
-        'expected the navbar logo, catalog, checkout, and profile links to be visible',
-      );
-    }
+    // Mirror TOM's navbar-shell.molecule.ts: WAIT for each affordance (the wait
+    // IS the presence assertion) at 8s.
+    await ui.waitForVisible(REF.navLogo, 8_000);
+    await ui.waitForVisible(REF.navCatalogLink, 8_000);
+    await ui.waitForVisible(REF.navCheckoutLink, 8_000);
+    await ui.waitForVisible(REF.navProfileLink, 8_000);
     // @visual @desktop @ui-only scenario terminates on this step.
     await runVisualCheck(this.world, DOMAIN, 'navbar_desktop_strip');
   }
@@ -129,17 +134,12 @@ export class NavbarUseCase {
       await runVisualCheck(this.world, DOMAIN, 'navbar_mobile_menu_opened');
       return;
     }
-    const visible =
-      (await ui.isVisible(REF.mobileNavCatalogLink)) &&
-      (await ui.isVisible(REF.mobileNavCheckoutLink)) &&
-      (await ui.isVisible(REF.mobileNavProfileLink)) &&
-      (await ui.isVisible(REF.mobileLogoutButton));
-    if (!visible) {
-      throw new ClassifiedError(
-        FailureBucket.ASSERTION_FAILURE,
-        'expected the mobile menu to show catalog, checkout, profile, and logout entries',
-      );
-    }
+    // Mirror TOM's navbar-shell.molecule.ts: WAIT for each drawer entry (the wait
+    // IS the presence assertion) at 8s.
+    await ui.waitForVisible(REF.mobileNavCatalogLink, 8_000);
+    await ui.waitForVisible(REF.mobileNavCheckoutLink, 8_000);
+    await ui.waitForVisible(REF.mobileNavProfileLink, 8_000);
+    await ui.waitForVisible(REF.mobileLogoutButton, 8_000);
     // @visual responsive/mobile scenario terminates on this step.
     await runVisualCheck(this.world, DOMAIN, 'navbar_mobile_menu_opened');
   }
