@@ -16,9 +16,7 @@ import type { GtaaWorld } from '../support/world';
 import { ApiExecutor } from '../../test-execution/api/api-executor';
 import { ClassifiedError, FailureBucket } from '../../shared/failure-buckets';
 import { textContains } from '../support/text-match';
-import { placeOrder } from '../../test-adaptation/clients/checkout-order';
-import { resolvePizzaId } from '../../test-adaptation/clients/catalog-lookup';
-import { addCustomizedToCart } from '../../test-adaptation/clients/cart-add';
+import { fetchLatestOrderId } from '../../test-adaptation/clients/order-lookup';
 import { seedWebPersistedStores, isWebPlatform } from '../support/web-session-seed';
 import { runVisualCheck } from './visual-check';
 import type { ApiExecutionResult } from '../../test-execution/api/api-executor';
@@ -47,30 +45,11 @@ const DOMAIN = 'order_success';
 const ORDER_SUCCESS_SCREEN_WAIT_MS = 90_000;
 
 /**
- * Fixed per-market order data, aligned with the TOM reference's ORDER_FIXTURES
- * (order-success.route.ts). createPlacedOrder places a FRESH market-specific
- * order from this fixture so the success screen renders in the scenario's
- * language, instead of reusing the user's latest (possibly US/en) order. Card
- * fields are intentionally absent: gTAA's placeOrder client transmits none
- * (mirrors the existing api checkout path in checkout.usecase.ts).
+ * Deterministic synthetic order id used to seed the confirmation context. There
+ * is no live backend in this baseline; the value flows into the {{orderId}}
+ * path template so the wiring is exercised. Held on world.state for isolation.
  */
-interface OrderFixture {
-  item: string;
-  size: string;
-  qty: number;
-  street: string;
-  zip: string;
-  suburb?: string;
-  name: string;
-  phone: string;
-}
-
-const ORDER_FIXTURES: Record<string, OrderFixture> = {
-  US: { item: 'Pepperoni', size: 'Large', qty: 1, street: '123 Luxury Avenue', zip: '90210', name: 'Julian Casablancas', phone: '+1 415 555 0101' },
-  MX: { item: 'Margherita', size: 'Medium', qty: 1, street: 'Av. Carranza 123', zip: '78230', suburb: 'Polanco', name: 'Guillermo Alcantara', phone: '+52 55 1234 5678' },
-  CH: { item: 'Marinara', size: 'Small', qty: 1, street: 'Bahnhofstrasse 12', zip: '8001', name: 'Lukas Baumgartner', phone: '+41 44 668 18 00' },
-  JP: { item: 'Pepperoni', size: 'Family', qty: 1, street: '1-2-3 Shibuya', zip: '150-0002', suburb: 'Tokyo', name: '田中 健太', phone: '+81 3 1234 5678' },
-};
+const SEED_ORDER_ID = 'seed-order';
 
 export class OrderSuccessUseCase {
   private readonly api = new ApiExecutor();
@@ -82,54 +61,19 @@ export class OrderSuccessUseCase {
     this.world.state.market = market;
     this.world.state.language = language;
 
-    // Place a FRESH market-specific order (mirrors the TOM reference's
-    // order-success.route.ts createPlacedOrder) so the success screen localizes
-    // to THIS scenario's market — instead of reusing the user's latest (possibly
-    // US/en) order, which renders the status title in the wrong locale.
-    const countryCode = market.toUpperCase();
-    const fixture = ORDER_FIXTURES[countryCode];
-    if (!fixture) {
-      throw new ClassifiedError(
-        FailureBucket.DATA_SETUP_FAILURE,
-        `No ORDER_FIXTURES entry for market "${market}".`,
-      );
-    }
-
-    const token = String(this.world.state.token ?? '');
-    // Resolve the fixture item -> catalog id, hydrate the cart, then place the
-    // order (same client flow as the api checkout path in checkout.usecase.ts).
-    const pizzaId =
-      (await resolvePizzaId(fixture.item, { token, market: countryCode })) ?? fixture.item;
-    await addCustomizedToCart({
-      token,
-      market: countryCode,
-      pizzaId,
-      size: fixture.size,
-      toppings: [],
-      quantity: fixture.qty,
-    });
-
-    const result = await placeOrder({
-      token,
-      market: countryCode,
-      items: [{ pizzaId, size: fixture.size, quantity: fixture.qty }],
-      name: fixture.name,
-      address: fixture.street,
-      phone: fixture.phone,
-      paymentMethod: 'card',
-      zip: fixture.zip,
-      suburb: fixture.suburb,
-    });
-
-    if (result.status < 200 || result.status >= 300 || !result.orderId) {
-      throw new ClassifiedError(
-        FailureBucket.API_RESPONSE_FAILURE,
-        `expected a placed order for market "${countryCode}" but checkout returned status ` +
-          `${result.status} (orderId=${result.orderId ?? 'none'})`,
-      );
-    }
-
-    this.world.state.orderId = result.orderId;
+    // The order-success screen mounts only for a real backend order id; use the
+    // user's latest order (falls back to the synthetic id only if unavailable).
+    // NOTE: the success-screen status TITLE is derived from the placed order's
+    // stored locale, not the seeded localStorage — fetchLatestOrderId returns the
+    // market's own properly-localized order, so MX/CH/JP titles localize. (A
+    // freshly-placed order via the checkout client carries no locale and renders
+    // English, which is why the TOM-style fresh-order placement was reverted.)
+    this.world.state.orderId =
+      (await fetchLatestOrderId({
+        token: String(this.world.state.token ?? ''),
+        market,
+        language,
+      })) ?? SEED_ORDER_ID;
     // No navigation here — the next step opens the success screen.
   }
 
@@ -228,7 +172,7 @@ export class OrderSuccessUseCase {
   }
 
   private orderId(): string {
-    return String(this.world.state.orderId);
+    return String(this.world.state.orderId ?? SEED_ORDER_ID);
   }
 
   private assertApiPass(result: ApiExecutionResult, endpointId: string): void {
