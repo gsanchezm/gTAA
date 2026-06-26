@@ -17,7 +17,7 @@
 // `webdriverio` is the runtime dependency used to create the Appium session.
 import { remote } from 'webdriverio';
 
-import type { UiDriver, CaptureOptions } from '../../test-adaptation/drivers/ui-driver';
+import type { UiDriver, CaptureOptions, ClickOptions } from '../../test-adaptation/drivers/ui-driver';
 import { resolveLocator } from '../../test-adaptation/locators/locator-resolver';
 import { mobileConfig, type MobileConfig } from '../../configuration/environments/env';
 import type { ExecutionContext } from '../../shared/types';
@@ -286,8 +286,14 @@ export abstract class AppiumExecutorBase implements UiDriver {
 
   // ---- UiDriver interactions (delegated to shared defensive helpers) ------
 
-  async click(ref: string): Promise<void> {
-    await safeTap(this.requireSession(), this.selectorFor(ref), this.platformKind, this.timeoutMs);
+  async click(ref: string, opts?: ClickOptions): Promise<void> {
+    await safeTap(
+      this.requireSession(),
+      this.selectorFor(ref),
+      this.platformKind,
+      opts?.timeoutMs ?? this.timeoutMs,
+      opts?.maxScrolls,
+    );
   }
 
   async type(ref: string, text: string): Promise<void> {

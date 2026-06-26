@@ -236,8 +236,14 @@ export class PizzaBuilderUseCase {
     // `[data-testid='topping-<slug>']` on web / `~btn-topping-<slug>` on mobile,
     // so e.g. `mushrooms` reaches `~btn-topping-mushrooms` on Android instead of
     // clicking the topping container N times.
+    // Mirror TOM's SHORT appium Click path for the topping tap ONLY (TOM Click.ts:
+    // scrollIntoViewSafe maxAttempts=3 + element.click()'s ~5s WDIO auto-wait) so
+    // gTAA can REPRODUCE TOM's ~btn-topping-<slug> Android not-found flake instead
+    // of masking it with the 60s / maxScrolls=10 global safeTap. Web ignores these
+    // opts; every other mobile click keeps the robust default budget.
+    const TOPPING_CLICK_OPTS = { timeoutMs: 5_000, maxScrolls: 3 } as const;
     for (const topping of toppings) {
-      await ui.click(`pizzaBuilder.toppingByName#slug=${slugify(topping)}`);
+      await ui.click(`pizzaBuilder.toppingByName#slug=${slugify(topping)}`, TOPPING_CLICK_OPTS);
     }
   }
 

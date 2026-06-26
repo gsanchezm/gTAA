@@ -14,6 +14,21 @@ export interface CaptureOptions {
   maskRefs?: string[];
 }
 
+/**
+ * Per-call overrides for click patience. Honored by the Appium executors (threaded
+ * to safeTap); the web executor accepts and ignores them (web fits the viewport, so
+ * scroll/timeout tuning is moot). Used to mirror the TOM reference's SHORT mobile
+ * click path on the topping tap ONLY — so gTAA can reproduce TOM's
+ * ~btn-topping-<slug> Android not-found flake — while the global mobile click stays
+ * at its robust 60s / maxScrolls=10 budget for login/checkout/profile/navbar.
+ */
+export interface ClickOptions {
+  /** Max Android gesture-scroll attempts before giving up (default 10). */
+  maxScrolls?: number;
+  /** Explicit-wait / interaction budget in ms (default = mobile config, 60000). */
+  timeoutMs?: number;
+}
+
 export interface UiDriver {
   readonly platform: string;
 
@@ -23,7 +38,7 @@ export interface UiDriver {
   stop(): Promise<void>;
 
   navigate(url: string): Promise<void>;
-  click(ref: string): Promise<void>;
+  click(ref: string, opts?: ClickOptions): Promise<void>;
   type(ref: string, text: string): Promise<void>;
   getText(ref: string): Promise<string>;
   isVisible(ref: string): Promise<boolean>;

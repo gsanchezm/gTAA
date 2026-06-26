@@ -225,6 +225,7 @@ export async function scrollIntoView(
   session: MobileSession,
   selector: string,
   platform: MobilePlatformKind,
+  maxScrolls?: number,
 ): Promise<void> {
   try {
     if (platform === 'android') {
@@ -241,7 +242,7 @@ export async function scrollIntoView(
         }
       }
       if (!(await isDisplayed(session, selector))) {
-        await androidGestureScroll(session, selector);
+        await androidGestureScroll(session, selector, maxScrolls);
       }
       return;
     }
@@ -442,6 +443,7 @@ export async function safeTap(
   selector: string,
   platform: MobilePlatformKind,
   timeoutMs: number = DEFAULT_WAIT_TIMEOUT_MS,
+  maxScrolls?: number,
 ): Promise<void> {
   // iOS perf: when a soft keyboard is up it usually covers the tap target (the
   // save/payment button after form entry). Clear it PROACTIVELY here so the wait
@@ -459,7 +461,7 @@ export async function safeTap(
       // latency for nothing. Gating on !isDisplayed confines the proactive clear to
       // the genuinely-covered case (save/payment buttons).
       if ((await session.isKeyboardShown()) && !(await isDisplayed(session, selector))) {
-        await scrollIntoView(session, selector, platform);
+        await scrollIntoView(session, selector, platform, maxScrolls);
       }
     } catch {
       // Best-effort; withStaleRetry still handles a covered target on its own.
@@ -467,7 +469,7 @@ export async function safeTap(
   }
   await withStaleRetry(session, selector, platform, timeoutMs, async (element) => {
     await element.click();
-  });
+  }, maxScrolls);
 }
 
 /**
@@ -556,6 +558,7 @@ async function withStaleRetry(
   platform: MobilePlatformKind,
   timeoutMs: number,
   action: (element: MobileElement) => Promise<void>,
+  maxScrolls?: number,
 ): Promise<void> {
   const acquire = async (): Promise<MobileElement> => {
     try {
@@ -563,7 +566,7 @@ async function withStaleRetry(
     } catch (err) {
       // If it never became visible, try to scroll it into view and wait again.
       if (err instanceof ClassifiedError && err.bucket === FailureBucket.TIMEOUT_FAILURE) {
-        await scrollIntoView(session, selector, platform);
+        await scrollIntoView(session, selector, platform, maxScrolls);
         return await waitForDisplayed(session, selector, timeoutMs);
       }
       throw err;
