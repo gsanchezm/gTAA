@@ -89,13 +89,60 @@ The order‑summary panel (items, subtotal, tax, delivery, total). Contract
 
 ---
 
-## TV‑2 (candidate, not yet confirmed) — `profile_post_save` responsive drift
+## TV‑2 (RESOLVED) — `profile_post_save` + `login_screen_invalid_credentials` were frozen‑contract divergences, now restored
 
-`profile_post_save` drifted **2/4 runs, responsive only** in the same
-characterization batch. It has **not** been investigated to the depth of TV‑1; it
-is plausibly the same wrong‑surface/timing class or a genuine inherent‑AA case on
-the dense responsive viewport. **Flag for the same exclude‑or‑investigate
-decision** before its pass‑rate is read as an architecture result.
+**Status:** Investigated 2026‑06‑27 (three‑agent workflow + direct `diff`), then **FIXED**.
+
+`profile_post_save`'s drift was **not** a runtime confound like TV‑1 — gTAA's
+`profile.visual.json` contract had **diverged from TOM** (a frozen‑asset invariant
+violation present since the initial commit `aaf2965`): gTAA left the captured
+region's own `profileFullNameInput` text **unmasked** (TOM masks it) and used a 3×
+tighter `0.01` threshold (TOM `0.03`). The rendered name drifted on the narrow
+responsive field; desktop was pixel‑exact. The systematic audit (below) found the
+same class in `login.visual.json` (gTAA missing the
+`quickLoginUserList`/`quickLoginLabel` masks).
+
+**Resolution:** both contracts were **restored to byte‑identical with TOM** (the
+correct direction — restoring the invariant, unlike TV‑1 where no fix exists) and
+the affected baselines regenerated. These snapshots are therefore back **in** the
+comparison, not excluded.
+
+## Asset‑parity audit (2026‑06‑27)
+
+A systematic byte‑diff of every gTAA `test-generation` asset against its TOM
+counterpart found **7 of 29 diverged** (22 byte‑identical, 0 missing). Disposition:
+
+| Asset | Class | Disposition |
+|---|---|---|
+| `contracts/visual/profile.visual.json` | visual‑mask bug (gTAA masks fewer) | **Restored** to TOM (TV‑2) |
+| `contracts/visual/login.visual.json` | visual‑mask bug (gTAA masks fewer) | **Restored** to TOM (TV‑2) |
+| `contracts/locators/{login,navbar,profile,pizzaBuilder}.locators.json` | gTAA added mobile selectors / template keys | **Kept + documented** (TV‑3) |
+| `contracts/api/login.api.contract.json` | description string only | **Kept + documented** (TV‑3) |
+
+## TV‑3 — accepted asset divergences (locator additions + one API description)
+
+**Decision (experiment owner, 2026‑06‑27): keep and document.** These do **not**
+affect the web functional/visual comparison and are entangled with gTAA's mobile
+locator resolution (the mobile suites are sim‑environment‑red in CI regardless).
+
+- **Locator additions:** gTAA's `login.locators.json` (`marketByCode` template),
+  `navbar.locators.json` (mobile `navLogo`/`navCartCount` + `navLogoutLink`),
+  `profile.locators.json` (a mobile address selector), and
+  `pizzaBuilder.locators.json` (`sizeByLabel`, the user‑approved `toppingByName`,
+  + mobile selectors) carry mobile selectors / template keys TOM's contracts lack.
+  They were added during gTAA's iOS/Android stabilization. Restoring strict
+  byte‑identity would require refactoring gTAA's mobile locator resolution to match
+  TOM's; it is deferred as an optional follow‑up. The divergence is confined to the
+  mobile path.
+- **API description:** `login.api.contract.json` differs only in a human
+  description that references TOM's `DAO`/`$S_0$`/"resonance" microkernel
+  terminology, not meaningful for gTAA's layered design. The request/response
+  contract itself is byte‑identical. Kept as an architecture‑appropriate
+  description.
+
+**Caveat:** any measure that depends on byte‑identical *locator* or
+*API‑description* assets must account for TV‑3 (none of the current
+visual/functional pass‑rate measures do).
 
 ---
 

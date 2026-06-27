@@ -33,7 +33,7 @@
       "id": "login_screen_invalid_credentials",
       "description": "Login screen after a failed sign-in attempt — the error banner ([data-testid='login-error']) renders 'Invalid credentials' below the form.",
       "regionRef": "loginScreen",
-      "maskRefs": ["usernameInput", "passwordInput"],
+      "maskRefs": ["usernameInput", "passwordInput", "quickLoginUserList", "quickLoginLabel"],
       "platforms": ["web", "android", "ios"],
       "viewports": ["desktop", "responsive", "mobile"],
       "thresholds": { "pixelRatio": 0.01 },
