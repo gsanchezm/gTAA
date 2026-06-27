@@ -66,6 +66,12 @@ with its TOM counterpart.
 | `failure_buckets.csv` | `build-failure-buckets.ts` | Failure counts grouped by bucket/source/tool/platform. |
 | `scenario_outcome_history.csv` | `build-outcome-history.ts` | Per-run scenario outcomes for reliability/flakiness analysis. |
 
+> **Known confound — exclude before comparing.** When deriving visual‑stability
+> measures from `visual_comparison_results.csv`, drop the `checkout_order_summary`
+> snapshot in **both** arms: it captures the wrong (non‑deterministic) screen, so
+> its drift is a test‑timing artifact, not an architecture effect. See
+> [threats-to-validity.md](./threats-to-validity.md) (TV‑1).
+
 `pnpm metrics:quality:all` then produces the quality-attribute CSVs. There are
 nine per-attribute files (one per `measure-*.ts` script) plus the consolidated
 summary:
