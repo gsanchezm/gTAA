@@ -89,7 +89,7 @@ The order‑summary panel (items, subtotal, tax, delivery, total). Contract
 
 ---
 
-## TV‑2 (RESOLVED) — `profile_post_save` + `login_screen_invalid_credentials` were frozen‑contract divergences, now restored
+## TV‑2 (RESOLVED) — `profile_post_save` was a frozen‑contract divergence, now restored
 
 **Status:** Investigated 2026‑06‑27 (three‑agent workflow + direct `diff`), then **FIXED**.
 
@@ -98,14 +98,19 @@ The order‑summary panel (items, subtotal, tax, delivery, total). Contract
 violation present since the initial commit `aaf2965`): gTAA left the captured
 region's own `profileFullNameInput` text **unmasked** (TOM masks it) and used a 3×
 tighter `0.01` threshold (TOM `0.03`). The rendered name drifted on the narrow
-responsive field; desktop was pixel‑exact. The systematic audit (below) found the
-same class in `login.visual.json` (gTAA missing the
-`quickLoginUserList`/`quickLoginLabel` masks).
+responsive field; desktop was pixel‑exact.
 
-**Resolution:** both contracts were **restored to byte‑identical with TOM** (the
-correct direction — restoring the invariant, unlike TV‑1 where no fix exists) and
-the affected baselines regenerated. These snapshots are therefore back **in** the
-comparison, not excluded.
+**Resolution:** `profile.visual.json` was **restored to byte‑identical with TOM**
+(the correct direction — restoring the invariant, unlike TV‑1 where no fix exists)
+and its baselines regenerated; the snapshot is back **in** the comparison.
+
+The audit found the same *class* of mask omission in `login.visual.json`
+(`login_screen_invalid_credentials` missing the `quickLoginUserList` /
+`quickLoginLabel` masks), but there the masked content is **static** (the demo
+quick‑login list) so the omission is **inert** — it never drifted. Restoring it
+would require a re‑baseline the regen could not reliably produce (that snapshot's
+capture is conditional, `login.usecase.ts:167,179`), so it was **left as‑is and
+documented in TV‑3**, not restored.
 
 ## Asset‑parity audit (2026‑06‑27)
 
@@ -115,7 +120,7 @@ counterpart found **7 of 29 diverged** (22 byte‑identical, 0 missing). Disposi
 | Asset | Class | Disposition |
 |---|---|---|
 | `contracts/visual/profile.visual.json` | visual‑mask bug (gTAA masks fewer) | **Restored** to TOM (TV‑2) |
-| `contracts/visual/login.visual.json` | visual‑mask bug (gTAA masks fewer) | **Restored** to TOM (TV‑2) |
+| `contracts/visual/login.visual.json` | mask omission but **inert** (masks static content) | **Kept** — TV‑3 |
 | `contracts/locators/{login,navbar,profile,pizzaBuilder}.locators.json` | gTAA added mobile selectors / template keys | **Kept + documented** (TV‑3) |
 | `contracts/api/login.api.contract.json` | description string only | **Kept + documented** (TV‑3) |
 
@@ -134,6 +139,13 @@ locator resolution (the mobile suites are sim‑environment‑red in CI regardle
   byte‑identity would require refactoring gTAA's mobile locator resolution to match
   TOM's; it is deferred as an optional follow‑up. The divergence is confined to the
   mobile path.
+- **Inert visual‑mask omission (`login.visual.json`):** the
+  `login_screen_invalid_credentials` snapshot masks two fewer fields than TOM
+  (`quickLoginUserList`, `quickLoginLabel`), but those cover the **static** demo
+  quick‑login list, so the omission never produced drift. Restoring it cleanly is
+  blocked by that snapshot's conditional capture (the baseline regen could not
+  reproduce it), so it is kept as‑is — benign. Restorable later once the capture is
+  made deterministic.
 - **API description:** `login.api.contract.json` differs only in a human
   description that references TOM's `DAO`/`$S_0$`/"resonance" microkernel
   terminology, not meaningful for gTAA's layered design. The request/response
