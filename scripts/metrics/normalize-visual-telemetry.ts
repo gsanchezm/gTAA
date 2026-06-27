@@ -18,6 +18,7 @@ import {
   num,
   str,
 } from './lib/metrics-common';
+import { isAnalysisExcludedSnapshot } from './lib/excluded-snapshots';
 
 const COLUMNS = [
   'run_id',
@@ -35,6 +36,10 @@ const COLUMNS = [
   'status',
   'duration_ms',
   'failure_bucket',
+  // 1 when this snapshot is a documented confound excluded from architecture
+  // analysis (TV-1); the row is retained here for transparency/audit. The CI
+  // visual gate ignores this column (it scans only for PASS/FAIL cells).
+  'analysis_excluded',
   ...IDENTITY_COLUMNS,
   'generated_at',
 ];
@@ -68,6 +73,7 @@ export function run(): string {
         status: normalizeStatus(r.status),
         duration_ms: num(r.duration_ms),
         failure_bucket: bucket(r.failure_bucket),
+        analysis_excluded: isAnalysisExcludedSnapshot(r.snapshot_id) ? 1 : 0,
         ...idc,
         tool_name: str(r.tool_name) || 'pixelmatch',
         generated_at: generated,

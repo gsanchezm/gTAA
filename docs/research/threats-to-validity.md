@@ -158,12 +158,56 @@ visual/functional pass‑rate measures do).
 
 ---
 
-## Note — functional intermittent flakes (low rate, near TOM)
+## TV‑4 — order‑success locale‑hydration flake is symmetric with TOM → **ACCEPT as a shared limitation (no gTAA‑only fix)**
 
-The same 4‑run characterization showed the functional suite (Playwright) green in
-3/4 runs; the residual functional flakes (order‑success locale‑hydration race;
-catalog "Margarita" search race; the place‑delivery backend cold‑start) each
-appeared in only **1/4** runs — noise‑level and not a systematic architecture
-difference. The order‑success locale race in particular is **symmetric** with TOM
-(both arms read the localized status once, with no settle; see the JP/ja analysis
-in the project memory) and is accepted as a shared known limitation.
+**Status:** Characterized across multiple CI runs (the 4‑run batch on `main` plus
+the verify runs); root‑caused and agent‑verified against the TOM reference.
+
+**Decision (experiment owner):** **Accept and document** as a shared, low‑rate
+known limitation. Do **not** add a gTAA‑only retry or settle/poll, and do **not**
+change the visual/CI gate. Adding either would make gTAA *more* robust than its
+frozen reference and bias the comparison toward gTAA.
+
+### Symptom
+On the order‑success screen for non‑English markets (most often JP/ja, sometimes
+MX/CH‑fr) the status title is occasionally read in **English**
+(`expected status "配達中" but got "Out for delivery"`). It is **intermittent**
+(seen on Playwright Responsive ~1 run in 4; desktop usually wins the same‑run
+race) and is **not** the cold‑backend flake — the "open success screen" step
+passes first, so the page has mounted; the title is read before the `ja` locale
+finishes hydrating.
+
+### Why it is symmetric with TOM (not an architecture effect)
+- gTAA's `seedWebPersistedStores` is byte‑equivalent to TOM's for the affected
+  markets (same five keys; `language:'ja'` + `locale:'ja-JP'` in
+  `omnipizza-country`).
+- TOM's order‑success path **also reads the localized status exactly once with no
+  settle** (`route.ts:147‑148`, `molecule.ts:180‑188`, immediate `ReadText.ts`) and
+  carries no flake note — the read‑once timing is **structurally identical in both
+  arms**, so gTAA's read‑once `assertScreenWithStatus` is a faithful mirror.
+- TOM's order placement sends **no locale signal** beyond `x-country-code` (which
+  gTAA already sends) — there is no placement‑side field gTAA is missing. The real
+  localization source (OrderSuccess.jsx / i18n) lives in the **un‑vendored app
+  code**, identical for both arms via the shared `BASE_URL` deploy.
+
+### Why no gTAA‑only mitigation
+- A localized‑title settle/poll, or a Cucumber `retry` for the scenario, would make
+  gTAA pass where TOM intermittently fails → **asymmetric robustness**, and a
+  `retry` additionally **pollutes the per‑scenario reliability metrics**. Both are
+  fairness‑gated and were rejected.
+- A lockstep fix in *both* arms is possible in principle but would require
+  re‑running TOM's frozen 50× campaign; not worth it for a noise‑level flake.
+
+### How it is handled in analysis
+- It is **not** excluded from the functional pass‑rate (unlike the visual confound
+  TV‑1): it is a genuine, symmetric intermittent outcome that both architectures
+  are equally exposed to, so it belongs in the reliability distribution. It is
+  expected to appear at a **comparable low rate** in both arms across the batch and
+  should be read as shared noise, not a gTAA defect.
+
+### Other residual functional flakes (noise‑level, 1/4)
+The same characterization saw two more single‑occurrence flakes — the catalog
+"Margarita" search race and the place‑delivery backend cold‑start (Render
+free‑tier ~30–45 s cold start, mitigated by the shared `warmUpServices()` +
+90 s order budgets). Each appeared in only **1/4** runs, is not a systematic
+architecture difference, and is left as shared noise.

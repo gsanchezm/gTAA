@@ -17,6 +17,7 @@ import { join } from 'node:path';
 import { RAW, REPO_ROOT, SUMMARY, percentile, readJsonlDir, round, writeJson, writeText } from './lib/io';
 import { ARCHITECTURE_TYPE, generatedAt, scriptIdentity } from './lib/identity';
 import { normalizeStatus, num } from './lib/metrics-common';
+import { isAnalysisExcludedSnapshot } from './lib/excluded-snapshots';
 import { readFeatureDir } from './lib/feature-parser';
 import { COVERAGE_PLATFORMS, coverageFromTags } from './lib/platform-tags';
 import { collapseToScenarios, loadTelemetry } from './lib/telemetry-load';
@@ -106,8 +107,14 @@ export function run(): { md: string; json: string } {
   ]);
 
   // ---- visual ----
+  // Documented confounds (TV-1, e.g. checkout_order_summary) are dropped from the
+  // headline pass-rate, the failure-bucket counts and the machine totals, but kept
+  // VISIBLE in the per-snapshot table marked EXCLUDED so nothing is silently
+  // removed. See docs/research/threats-to-validity.md and lib/excluded-snapshots.ts.
   const visual = readJsonlDir<Record<string, unknown>>(join(RAW, 'visual'));
-  const visualPass = visual.filter((r) => normalizeStatus(r.status) === 'PASS').length;
+  const visualAnalyzed = visual.filter((r) => !isAnalysisExcludedSnapshot(r.snapshot_id));
+  const visualExcluded = visual.filter((r) => isAnalysisExcludedSnapshot(r.snapshot_id));
+  const visualPass = visualAnalyzed.filter((r) => normalizeStatus(r.status) === 'PASS').length;
   const visualRows: Array<Array<string | number>> = visual.map((r) => [
     String(r.snapshot_id ?? ''),
     String(r.platform ?? ''),
@@ -115,6 +122,7 @@ export function run(): { md: string; json: string } {
     num(r.diff_pixels) === '' ? 'NOT_AVAILABLE' : num(r.diff_pixels),
     num(r.diff_ratio) === '' ? 'NOT_AVAILABLE' : num(r.diff_ratio),
     normalizeStatus(r.status),
+    isAnalysisExcludedSnapshot(r.snapshot_id) ? 'EXCLUDED' : 'INCLUDED',
   ]);
 
   // ---- performance ----
@@ -136,7 +144,8 @@ export function run(): { md: string; json: string } {
   };
   for (const e of loadTelemetry()) countBucket(e.failure_bucket);
   for (const r of api) countBucket(r.failure_bucket);
-  for (const r of visual) countBucket(r.failure_bucket);
+  // Excluded confounds (TV-1) must not inflate the failure-bucket distribution.
+  for (const r of visualAnalyzed) countBucket(r.failure_bucket);
   for (const r of gatling) countBucket(r.failure_bucket);
   const bucketRows: Array<Array<string | number>> = [...bucketCounts.entries()]
     .sort((a, b) => a[0].localeCompare(b[0]))
@@ -176,9 +185,19 @@ export function run(): { md: string; json: string } {
     '',
     '## Visual Comparison Results',
     '',
-    `Pass: ${visualPass} / ${visual.length}`,
+    `Pass: ${visualPass} / ${visualAnalyzed.length} (analyzed; documented confounds excluded)`,
+    visualExcluded.length > 0
+      ? `Excluded from analysis (documented confounds — see docs/research/threats-to-validity.md TV-1): ${[
+          ...new Set(visualExcluded.map((r) => String(r.snapshot_id ?? ''))),
+        ]
+          .sort()
+          .join(', ')} (${visualExcluded.length} row${visualExcluded.length === 1 ? '' : 's'}, marked EXCLUDED below)`
+      : 'Excluded from analysis: none.',
     '',
-    mdTable(['snapshot_id', 'platform', 'viewport', 'diff_pixels', 'diff_ratio', 'status'], visualRows),
+    mdTable(
+      ['snapshot_id', 'platform', 'viewport', 'diff_pixels', 'diff_ratio', 'status', 'analysis'],
+      visualRows,
+    ),
     '',
     '## Performance Summary',
     '',
@@ -189,6 +208,16 @@ export function run(): { md: string; json: string } {
     '',
     '## Failure Buckets',
     '',
+    ...(visualExcluded.length > 0
+      ? [
+          `_Excludes documented visual confounds (TV-1): ${[
+            ...new Set(visualExcluded.map((r) => String(r.snapshot_id ?? ''))),
+          ]
+            .sort()
+            .join(', ')} — see docs/research/threats-to-validity.md._`,
+          '',
+        ]
+      : []),
     mdTable(['failure_bucket', 'count'], bucketRows),
     '',
   ].join('\n');
@@ -209,8 +238,13 @@ export function run(): { md: string; json: string } {
       scenarios_passed: passCount,
       api_events: api.length,
       api_passed: apiPass,
+      // visual_events keeps its original meaning (ALL captured comparisons);
+      // visual_events_analyzed / visual_passed exclude documented confounds (TV-1),
+      // and visual_events === visual_events_analyzed + visual_excluded.
       visual_events: visual.length,
+      visual_events_analyzed: visualAnalyzed.length,
       visual_passed: visualPass,
+      visual_excluded: visualExcluded.length,
       performance_simulations: gatling.length,
       failure_events: [...bucketCounts.values()].reduce((a, b) => a + b, 0),
     },

@@ -61,7 +61,7 @@ with its TOM counterpart.
 | `scenario_durations.csv` | `aggregate-durations.ts` | Per-scenario duration percentiles (p50/p95/p99, mean, min, max). |
 | `platform_durations.csv` | `aggregate-durations.ts` | Per-platform/tool duration percentiles. |
 | `api_isolated_results.csv` | `normalize-api-telemetry.ts` | API contract outcomes per endpoint. |
-| `visual_comparison_results.csv` | `normalize-visual-telemetry.ts` | Visual diff outcomes per snapshot. |
+| `visual_comparison_results.csv` | `normalize-visual-telemetry.ts` | Visual diff outcomes per snapshot. Carries an `analysis_excluded` (0/1) column flagging documented confounds (TV‑1); the file retains **all** rows for audit. |
 | `performance_summary.csv` | `normalize-gatling-telemetry.ts` | Performance simulation summaries. |
 | `failure_buckets.csv` | `build-failure-buckets.ts` | Failure counts grouped by bucket/source/tool/platform. |
 | `scenario_outcome_history.csv` | `build-outcome-history.ts` | Per-run scenario outcomes for reliability/flakiness analysis. |

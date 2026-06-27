@@ -16,6 +16,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { PROCESSED, REPO_ROOT, readCsv, round, writeCsv } from './lib/io';
+import { isAnalysisExcludedSnapshot } from './lib/excluded-snapshots';
 import {
   QUALITY_COLUMNS,
   generatedAt,
@@ -145,7 +146,10 @@ function successAndFailureTools(): {
     withResults.add('api');
     if (String(r.status).toUpperCase() === 'PASS') success.add('api');
   }
-  const visual = readCsv(join(PROCESSED, 'visual_comparison_results.csv'));
+  // Exclude documented confounds (TV-1) uniformly wherever visual results are read.
+  const visual = readCsv(join(PROCESSED, 'visual_comparison_results.csv')).filter(
+    (r) => !isAnalysisExcludedSnapshot(r.snapshot_id),
+  );
   for (const r of visual) {
     withResults.add('pixelmatch');
     if (String(r.status).toUpperCase() === 'PASS') success.add('pixelmatch');
