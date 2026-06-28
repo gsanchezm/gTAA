@@ -207,6 +207,11 @@ jobs:
     # target self-hosted / real devices; in that case swap runs-on for a
     # self-hosted label (e.g. [self-hosted, macos, ios]).
     runs-on: macos-14
+    # Bound a hung simulator/WDA bootstrap: a healthy run finishes well within
+    # this, but a sim-environment failure (e.g. xcrun SDK-version timeout) must
+    # fail fast rather than occupy the runner to the 6h default and block
+    # `consolidate`. Does not change test behaviour — only caps wasted wall-clock.
+    timeout-minutes: 45
     needs: [resolve-omnipizza-release, playwright-responsive]
     if: always()
     env:
@@ -328,6 +333,12 @@ jobs:
     # ubuntu-latest GitHub-hosted runners. Swap for a self-hosted label to run
     # against a real-device lab (e.g. [self-hosted, android]).
     runs-on: ubuntu-latest
+    # Bound a hung emulator/app-launch: a healthy run finishes well within this,
+    # but a sim-environment failure (e.g. the app never renders, so every
+    # scenario burns its 60s element budget — 88 x 60s ≈ 1.5h+) must fail fast
+    # rather than occupy the runner to the 6h default and block `consolidate`.
+    # Does not change test behaviour — only caps wasted wall-clock.
+    timeout-minutes: 45
     needs: [resolve-omnipizza-release, playwright-responsive]
     if: always()
     env:
