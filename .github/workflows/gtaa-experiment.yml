@@ -208,11 +208,11 @@ jobs:
     # self-hosted label (e.g. [self-hosted, macos, ios]).
     runs-on: macos-14
     # Bound a hung run while leaving room for a HEALTHY 88-scenario XCUITest
-    # suite (empirically ~140 min — XCUITest is slow). 150 min fits that with
-    # margin yet still caps a genuinely wedged toolchain/sim well short of the
-    # 6h default (which would block `consolidate`). Caps wasted wall-clock only —
-    # no test-behaviour change.
-    timeout-minutes: 150
+    # suite. Run 28313147720 hit the 150-min cap mid-suite (XCUITest is very
+    # slow), so allow 180 min to let it actually complete and emit telemetry,
+    # still well short of the 6h default that would block `consolidate`. Caps
+    # wasted wall-clock only — no test-behaviour change.
+    timeout-minutes: 180
     needs: [resolve-omnipizza-release, playwright-responsive]
     if: always()
     env:

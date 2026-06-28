@@ -285,6 +285,7 @@ async function androidGestureScroll(
   // we are scrolling to (the bottom-of-form CTAs: place-order / save-profile /
   // card-holder). Dismiss it first; this must never fail the scroll.
   await dismissKeyboard(session).catch(() => undefined);
+  let swipes = 0;
   for (let attempt = 0; attempt < maxScrolls; attempt += 1) {
     if (await isDisplayed(session, selector)) return;
     try {
@@ -293,10 +294,15 @@ async function androidGestureScroll(
       // ScrollViews, so off-screen list items (e.g. a pizza card below the fold
       // in the CH catalog) were never reached. Mirrors TOM's swipeUpW3C.
       await swipeUpW3C(session, 0.66);
-    } catch {
+      swipes += 1;
+    } catch (err) {
+      process.stderr.write(
+        `[mobile-scroll] swipe failed for ${selector} after ${swipes}: ${(err as Error)?.message}\n`,
+      );
       return; // swipe unsupported -> let the caller's wait classify it
     }
   }
+  process.stderr.write(`[mobile-scroll] ${selector} not displayed after ${swipes} W3C swipe(s)\n`);
 }
 
 /**
@@ -307,7 +313,12 @@ async function androidGestureScroll(
  * TOM reference's swipeUpW3C (appium-helpers.ts) so both arms scroll identically.
  */
 async function swipeUpW3C(session: MobileSession, percent = 0.66): Promise<void> {
-  if (!session.getWindowSize || !session.performActions) return;
+  if (!session.getWindowSize || !session.performActions) {
+    process.stderr.write(
+      `[mobile-scroll] swipeUpW3C unavailable (getWindowSize=${!!session.getWindowSize} performActions=${!!session.performActions})\n`,
+    );
+    return;
+  }
   const size = await session.getWindowSize();
   const centerX = Math.round(size.width / 2);
   const startY = Math.round(size.height * 0.78);
@@ -593,10 +604,20 @@ async function withStaleRetry(
   maxScrolls?: number,
 ): Promise<void> {
   const acquire = async (): Promise<MobileElement> => {
+    // Scroll-into-view BEFORE the wait, mirroring TOM's Click/Type which call
+    // scrollIntoViewSafe before interacting. isDisplayed-guarded so an already
+    // on-screen target skips the scroll (no behaviour change); an OFF-screen
+    // target (a pizza card below the fold in the CH catalog, a bottom-of-form
+    // CTA) is scrolled in first. The previous wait-then-scroll order burned the
+    // full 60s wait before scrolling, so below-the-fold elements were never
+    // reached within the interaction.
+    if (!(await isDisplayed(session, selector))) {
+      await scrollIntoView(session, selector, platform, maxScrolls).catch(() => undefined);
+    }
     try {
       return await waitForDisplayed(session, selector, timeoutMs);
     } catch (err) {
-      // If it never became visible, try to scroll it into view and wait again.
+      // Safety net: if it still never became visible, scroll once more and wait.
       if (err instanceof ClassifiedError && err.bucket === FailureBucket.TIMEOUT_FAILURE) {
         await scrollIntoView(session, selector, platform, maxScrolls);
         return await waitForDisplayed(session, selector, timeoutMs);
