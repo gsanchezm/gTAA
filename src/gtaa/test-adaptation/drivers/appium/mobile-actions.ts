@@ -38,6 +38,12 @@ export type MobileSession = {
   execute(script: string, ...args: unknown[]): Promise<unknown>;
   /** Viewport size, used to bound gesture-scroll areas. */
   getWindowSize?(): Promise<{ width: number; height: number }>;
+  /** W3C Actions API: a low-level pointer (touch) gesture. Used for the touch
+   *  swipe that actually scrolls React-Native ScrollViews on Android, where
+   *  `mobile: scrollGesture`/`mobile: swipe` silently no-op (so off-screen list
+   *  items are never reached). Mirrors the TOM reference's swipe driver. */
+  performActions?(actions: unknown[]): Promise<void>;
+  releaseActions?(): Promise<void>;
   /** Apply driver settings at runtime (e.g. XCUITest snapshot/idle tuning). */
   updateSettings?(settings: Record<string, unknown>): Promise<void>;
   /** Accept a pending system alert (e.g. iOS "Open in app?" deep-link confirmation).
@@ -279,22 +285,48 @@ async function androidGestureScroll(
   // we are scrolling to (the bottom-of-form CTAs: place-order / save-profile /
   // card-holder). Dismiss it first; this must never fail the scroll.
   await dismissKeyboard(session).catch(() => undefined);
-  if (!session.getWindowSize) return;
-  const { width, height } = await session.getWindowSize();
-  const area = {
-    left: Math.round(width * 0.1),
-    top: Math.round(height * 0.25),
-    width: Math.round(width * 0.8),
-    height: Math.round(height * 0.5),
-  };
   for (let attempt = 0; attempt < maxScrolls; attempt += 1) {
     if (await isDisplayed(session, selector)) return;
     try {
-      await session.execute('mobile: scrollGesture', { ...area, direction: 'down', percent: 0.85 });
+      // A real W3C pointer swipe — NOT `mobile: scrollGesture`, which the TOM
+      // reference verified (on-device 2026-05-28) silently no-ops on RN
+      // ScrollViews, so off-screen list items (e.g. a pizza card below the fold
+      // in the CH catalog) were never reached. Mirrors TOM's swipeUpW3C.
+      await swipeUpW3C(session, 0.66);
     } catch {
-      return; // gesture unsupported -> let the caller's wait classify it
+      return; // swipe unsupported -> let the caller's wait classify it
     }
   }
+}
+
+/**
+ * Drive a single upward touch swipe via the W3C Actions API. On Android
+ * UiAutomator2 this is the only gesture that reliably scrolls React-Native
+ * ScrollViews (`mobile: scrollGesture`/`mobile: swipe` no-op), so it is what
+ * brings off-screen list items into view. Byte-for-byte the same geometry as the
+ * TOM reference's swipeUpW3C (appium-helpers.ts) so both arms scroll identically.
+ */
+async function swipeUpW3C(session: MobileSession, percent = 0.66): Promise<void> {
+  if (!session.getWindowSize || !session.performActions) return;
+  const size = await session.getWindowSize();
+  const centerX = Math.round(size.width / 2);
+  const startY = Math.round(size.height * 0.78);
+  const endY = Math.round(size.height * Math.max(0.12, 0.78 - percent));
+  await session.performActions([
+    {
+      type: 'pointer',
+      id: 'finger1',
+      parameters: { pointerType: 'touch' },
+      actions: [
+        { type: 'pointerMove', duration: 0, x: centerX, y: startY },
+        { type: 'pointerDown', button: 0 },
+        { type: 'pause', duration: 60 },
+        { type: 'pointerMove', duration: 280, x: centerX, y: endY },
+        { type: 'pointerUp', button: 0 },
+      ],
+    },
+  ]);
+  await session.releaseActions?.();
 }
 
 /**
