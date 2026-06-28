@@ -255,6 +255,30 @@ jobs:
           echo "Resolved IOS_APP_PATH=$IOS_APP_PATH"
         shell: bash
 
+      # ---- Pin a modern Xcode + pre-warm the host toolchain ----------------
+      # The macos-14 image's DEFAULT-selected Xcode drifted to 15.4 (2024) while
+      # its iOS simulator runtimes are 18.x. Under the stale default,
+      # appium-xcuitest's `xcrun --sdk iphonesimulator --show-sdk-version` probe
+      # (hard 15s cap, SIGKILLed on timeout) never finishes priming the cold SDK
+      # metadata cache, so every XCUITest session dies with "Could not determine
+      # iOS SDK version" and ZERO sessions start. Select the newest installed
+      # Xcode 16.x and prime that exact query once (un-capped, bounded retry) so
+      # later Appium sessions reuse the warm cache. Pure host provisioning — no
+      # test-layer change; moves gTAA toward the toolchain a healthy run had.
+      - name: Select + warm Xcode toolchain
+        run: |
+          XC=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -1)
+          sudo xcode-select -s "${XC:-/Applications/Xcode.app}"
+          xcodebuild -version
+          sudo xcodebuild -runFirstLaunch || true
+          for i in $(seq 1 6); do
+            if timeout 60 xcrun --sdk iphonesimulator --show-sdk-version; then
+              echo "iphonesimulator SDK query is warm"; break
+            fi
+            echo "SDK query still slow (attempt $i) — retrying"; sleep 3
+          done
+        shell: bash
+
       # ---- iOS simulator setup ---------------------------------------------
       # Select an available iPhone simulator, export its name so the executor
       # (appium:deviceName = IOS_DEVICE_NAME) targets exactly it, then boot it so
@@ -271,7 +295,9 @@ jobs:
           echo "IOS_DEVICE_NAME=$IOS_DEVICE_NAME" >> "$GITHUB_ENV"
           echo "Selected simulator: $IOS_DEVICE_NAME ($IOS_UDID)"
           xcrun simctl boot "$IOS_UDID" || true
-          xcrun simctl bootstatus "$IOS_UDID" -b || true
+          # Block until first-boot Data Migration completes before Appium starts
+          # (no `|| true` — surface a real boot failure; parity with TOM).
+          xcrun simctl bootstatus "$IOS_UDID" -b
         shell: bash
 
       # Start Appium and run the suite in the SAME step so the background server
@@ -419,6 +445,23 @@ jobs:
             sleep 15
           done
           adb devices
+        shell: bash
+
+      # ---- Suppress emulator SYSTEM error/ANR dialogs ----------------------
+      # Under load the docker emulator's SystemUI process can ANR and pop a modal
+      # ("System UI isn't responding") that overlays the AUT, occluding the login
+      # field ~input-username so every scenario times out (0/88). This is an
+      # emulator/OS artifact independent of the architecture — the app itself
+      # renders correctly. hide_error_dialogs stops the OS from drawing that modal
+      # (same category as the DISABLE_ANIMATION/DISABLE_HIDDEN_POLICY emulator
+      # flags above); it cannot mask a genuine app failure (which shows a
+      # different signature). CI-env confound removal — see threats-to-validity.md.
+      - name: Suppress emulator system error/ANR dialogs
+        continue-on-error: true
+        run: |
+          adb -s localhost:5555 wait-for-device || true
+          adb -s localhost:5555 shell settings put global hide_error_dialogs 1 || true
+          echo "hide_error_dialogs=$(adb -s localhost:5555 shell settings get global hide_error_dialogs)"
         shell: bash
 
       # Start Appium and run the suite in the SAME step (project-local

@@ -211,3 +211,45 @@ The same characterization saw two more single‑occurrence flakes — the catalo
 free‑tier ~30–45 s cold start, mitigated by the shared `warmUpServices()` +
 90 s order budgets). Each appeared in only **1/4** runs, is not a systematic
 architecture difference, and is left as shared noise.
+
+---
+
+## TV‑5 — mobile CI‑environment artifacts (iOS Xcode‑default drift + Android SystemUI ANR) → **CI‑infra fixes, gTAA‑only, not architecture effects**
+
+**Status:** Diagnosed 2026‑06‑27 from validation run `28302207290` (two‑agent
+investigation against the CI logs + the Android failure screenshot/page‑source).
+Both mobile suites failed **0/88** in CI; in **both** cases the app and the test
+code are correct (the suites are 88/88 locally) — the failures are GitHub‑runner
+environment artifacts, independent of the layered‑vs‑microkernel architecture.
+
+| | iOS (`appium-ios`, macos‑14) | Android (`appium-android`, docker emulator) |
+|---|---|---|
+| Symptom | 0/88 — no XCUITest session ever starts | 0/88 — login field `~input-username` never displayed |
+| Root cause | The `macos‑14` image (rebuilt 2026‑06‑08) **default‑selects the stale Xcode 15.4** while its sim runtimes are iOS 18.x; `appium-xcuitest`'s `xcrun --sdk iphonesimulator --show-sdk-version` probe (hard 15 s cap, SIGKILLed) never primes the cold SDK cache → "Could not determine iOS SDK version" on every session | A **SystemUI ANR modal** ("System UI isn't responding") overlays the **correctly‑rendered** login screen, occluding `~input-username`; every scenario then burns its 60 s element wait. The app launched (`com.omnipizza.app/.MainActivity` focused) and the backend was reachable |
+| Fix (CI infra only) | Pin the newest installed **Xcode 16.x** + pre‑warm the `xcrun` SDK query before Appium; make `bootstatus -b` block (parity with TOM) | `adb shell settings put global hide_error_dialogs 1` (stop the OS drawing crash/ANR modals; same category as the existing `DISABLE_ANIMATION` emulator flags) |
+
+### Why the fixes are fair (applied to gTAA only; TOM NOT edited)
+- Both fixes touch **CI provisioning only** — Xcode selection / toolchain pre‑warm
+  / simulator boot ordering (iOS) and an emulator OS setting (Android). **No
+  test‑layer behaviour changes**: element‑wait budgets, retries, locators, and
+  capabilities are untouched, so gTAA's mobile suite is **not** made more tolerant
+  of app/UI slowness than TOM's (the experiment's [fairness rule 3](../../) —
+  never make gTAA exceed TOM).
+- TOM's frozen 50× mobile runs **predate the 2026‑06‑08 macos image drift** and
+  were **ANR‑clean** (green except an occasional Android `~btn-topping-mushrooms`
+  topping flake). So these fixes bring gTAA **to the environment parity TOM
+  already had**, rather than granting gTAA an advantage TOM lacked. TOM is frozen
+  and is **not** re‑run, so no TOM‑side mirror is applied (experiment‑owner
+  decision, 2026‑06‑27). The Android suppression also **cannot mask a genuine app
+  failure** — a real app ANR shows a different signature (missing app content, not
+  an OS modal over a rendered screen).
+- These are **CI‑environment confounds**, not architecture signals: read a mobile
+  CI failure of this shape as runner/emulator noise, not a gTAA defect.
+
+### Caveat — a fully‑green iOS round is not guaranteed in one run
+Historically gTAA's CI iOS was **68/88** (element‑render flakes beyond the
+session‑start bug); the Xcode fix unblocks session creation (0/88 → sessions
+start) but the job runs without `|| true`, so a *fully* green iOS job may need a
+few CI cycles or may remain intermittently short of 88/88 — a runner‑side limit,
+not an architecture difference. Android is expected to green more reliably once
+the ANR modal is suppressed.
