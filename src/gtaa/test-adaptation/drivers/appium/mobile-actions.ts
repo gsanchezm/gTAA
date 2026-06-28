@@ -285,7 +285,6 @@ async function androidGestureScroll(
   // we are scrolling to (the bottom-of-form CTAs: place-order / save-profile /
   // card-holder). Dismiss it first; this must never fail the scroll.
   await dismissKeyboard(session).catch(() => undefined);
-  let swipes = 0;
   for (let attempt = 0; attempt < maxScrolls; attempt += 1) {
     if (await isDisplayed(session, selector)) return;
     try {
@@ -294,15 +293,10 @@ async function androidGestureScroll(
       // ScrollViews, so off-screen list items (e.g. a pizza card below the fold
       // in the CH catalog) were never reached. Mirrors TOM's swipeUpW3C.
       await swipeUpW3C(session, 0.66);
-      swipes += 1;
-    } catch (err) {
-      process.stderr.write(
-        `[mobile-scroll] swipe failed for ${selector} after ${swipes}: ${(err as Error)?.message}\n`,
-      );
+    } catch {
       return; // swipe unsupported -> let the caller's wait classify it
     }
   }
-  process.stderr.write(`[mobile-scroll] ${selector} not displayed after ${swipes} W3C swipe(s)\n`);
 }
 
 /**
@@ -313,12 +307,7 @@ async function androidGestureScroll(
  * TOM reference's swipeUpW3C (appium-helpers.ts) so both arms scroll identically.
  */
 async function swipeUpW3C(session: MobileSession, percent = 0.66): Promise<void> {
-  if (!session.getWindowSize || !session.performActions) {
-    process.stderr.write(
-      `[mobile-scroll] swipeUpW3C unavailable (getWindowSize=${!!session.getWindowSize} performActions=${!!session.performActions})\n`,
-    );
-    return;
-  }
+  if (!session.getWindowSize || !session.performActions) return;
   const size = await session.getWindowSize();
   const centerX = Math.round(size.width / 2);
   const startY = Math.round(size.height * 0.78);

@@ -207,12 +207,13 @@ jobs:
     # target self-hosted / real devices; in that case swap runs-on for a
     # self-hosted label (e.g. [self-hosted, macos, ios]).
     runs-on: macos-14
-    # Bound a hung run while leaving room for a HEALTHY 88-scenario XCUITest
-    # suite. Run 28313147720 hit the 150-min cap mid-suite (XCUITest is very
-    # slow), so allow 180 min to let it actually complete and emit telemetry,
-    # still well short of the 6h default that would block `consolidate`. Caps
+    # iOS is OUT OF SCOPE for the comparison (threats-to-validity.md TV-5): the
+    # macos-14 runner's Xcode toolchain is intermittently/unrecoverably wedged
+    # (xcrun SDK-version hang), so the job is red regardless. Cap at 90 min to
+    # bound CI cost — a toolchain-hung run fails fast (~26 min); a cooperating
+    # one runs the (slow) suite far enough to emit telemetry before the cap. Caps
     # wasted wall-clock only — no test-behaviour change.
-    timeout-minutes: 180
+    timeout-minutes: 90
     needs: [resolve-omnipizza-release, playwright-responsive]
     if: always()
     env:

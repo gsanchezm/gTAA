@@ -253,3 +253,39 @@ start) but the job runs without `|| true`, so a *fully* green iOS job may need a
 few CI cycles or may remain intermittently short of 88/88 — a runner‑side limit,
 not an architecture difference. Android is expected to green more reliably once
 the ANR modal is suppressed.
+
+### Resolution (experiment owner, 2026‑06‑28): mobile is OUT OF SCOPE for the comparison — CI‑environment instability, unfixable within fairness
+Three further CI cycles (runs `28311249516`, `28313147720`, `28316969010`) with
+the infra fixes above established that **a reliably green mobile round is not
+achievable in this CI without breaking the experiment's fairness rules**, on
+*both* platforms, for reasons independent of the architecture:
+
+- **Android — the AUT is killed mid‑session.** With the ANR suppressed and the
+  150‑min budget, Android ran the full suite but plateaued at **59/88**. The
+  failure screenshots + page‑source dumps are decisive: **23 of 24** failure
+  captures show the **Android launcher/home screen** — the OmniPizza app had been
+  **killed/backgrounded** on the resource‑constrained docker emulator
+  (`MEMORY=4096/CORES=2`, byte‑identical to TOM), so every subsequent element
+  lookup failed. It is *not* a scroll or locator bug (the `~btn-add-pizza-p06`
+  "CH/Marinara" cluster and the bottom‑of‑form CTAs were red because the app was
+  gone, not below the fold), and *not* architecture‑related.
+- **iOS — the host Xcode toolchain hangs intermittently.** Even with Xcode pinned
+  and pre‑warmed, `xcrun --sdk iphonesimulator --show-sdk-version` is
+  *intermittently and unrecoverably wedged* on the `macos‑14` image (warmed in 21 s
+  on one run, hung through 6×60 s retries on another → 0 sessions). When the
+  toolchain does cooperate, 88 XCUITest scenarios exceed the 150‑min budget.
+
+Neither is fixable without violating fairness: raising the emulator's
+memory/cores would **exceed TOM's frozen config**, and adding a gTAA‑only
+"relaunch the app if it fell to the launcher" recovery would make gTAA **more
+robust than TOM** (which has no such recovery) — either biases the paired
+comparison. The methodologically clean action is therefore to **treat the mobile
+(`@android`/`@ios`) suites as out of scope** for the gTAA↔TOM comparison — a
+shared CI‑environment limitation, not an architecture signal — and read the
+experiment on the **web / API / visual / performance** core.
+
+The CI‑infra fixes (Xcode pin + pre‑warm, ANR suppression, the
+`mobile: scrollGesture`→W3C‑swipe correction and scroll‑before‑wait order — both
+genuine alignments to TOM's mobile interaction) are **kept**: they are fair,
+move gTAA toward TOM, and took Android from 0/88 to 59/88. They simply cannot
+overcome the emulator killing the app or the runner's wedged toolchain.
