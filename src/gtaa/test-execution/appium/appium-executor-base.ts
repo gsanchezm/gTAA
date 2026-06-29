@@ -77,6 +77,37 @@ function langParamOf(query: string): string {
   return m ? decodeURIComponent(m[1]) : '';
 }
 
+/**
+ * ONE Appium session is REUSED across every scenario of a run (mirrors the TOM
+ * reference's session cache). gTAA's Automated Atomic Testing still creates a
+ * fresh UiDriver per scenario, but recreating the underlying UiAutomator2/WDA
+ * session 88× exhausts the resource-constrained CI emulator until its OOM-killer
+ * kills the foreground AUT (the app drops to the launcher and every later
+ * scenario fails). The cache lets each per-scenario executor reuse the same
+ * session; per-scenario isolation is restored by an app-reset deep link in
+ * stop(), exactly as TOM does via its appium resetClientState()
+ * (`omnipizza://login?resetSession=true`). The session is closed once, at
+ * AfterAll, via teardownSharedAppiumSessions(). See
+ * docs/research/threats-to-validity.md TV-5.
+ */
+const sharedSessions = new Map<MobilePlatformKind, MobileSession>();
+
+/** Reset deep link mirroring TOM's appium resetClientState() between scenarios. */
+const RESET_DEEP_LINK = 'omnipizza://login?resetSession=true';
+
+/** Close + clear every cached Appium session. Called once from AfterAll. */
+export async function teardownSharedAppiumSessions(): Promise<void> {
+  for (const session of sharedSessions.values()) {
+    const s = session as unknown as { deleteSession?: () => Promise<void> };
+    try {
+      if (s.deleteSession) await s.deleteSession();
+    } catch {
+      // teardown is best-effort; never throw out of AfterAll
+    }
+  }
+  sharedSessions.clear();
+}
+
 export abstract class AppiumExecutorBase implements UiDriver {
   /** Public, neutral platform tag required by the UiDriver contract. */
   readonly platform: string;
@@ -107,6 +138,16 @@ export abstract class AppiumExecutorBase implements UiDriver {
   async start(): Promise<void> {
     if (this.session) return; // idempotent
 
+    // Reuse the run's already-open session if one exists (see sharedSessions):
+    // recreating the UiAutomator2/WDA session per scenario is what exhausts the
+    // CI emulator and gets the AUT OOM-killed. The previous scenario's stop()
+    // left the app reset, so this session is ready to use as-is.
+    const cached = sharedSessions.get(this.platformKind);
+    if (cached) {
+      this.session = cached;
+      return;
+    }
+
     const options: RemoteOptions = {
       hostname: this.config.appiumHost,
       port: this.config.appiumPort,
@@ -128,6 +169,8 @@ export abstract class AppiumExecutorBase implements UiDriver {
         // remote() returns the rich webdriverio Browser; we only consume the
         // loose MobileSession surface, so narrow through unknown.
         this.session = (await remote(options as never)) as unknown as MobileSession;
+        // Cache the freshly-bootstrapped session so every later scenario reuses it.
+        sharedSessions.set(this.platformKind, this.session);
         // Platform-specific runtime tuning (e.g. iOS snapshot settings). Runs
         // once per session, after bootstrap; the hook is best-effort by contract.
         await this.afterStart();
@@ -150,19 +193,20 @@ export abstract class AppiumExecutorBase implements UiDriver {
   }
 
   async stop(): Promise<void> {
-    const session = this.session as unknown as
-      | { deleteSession?: () => Promise<void> }
-      | undefined;
-    if (!session) return; // safe / idempotent
+    // Per-scenario teardown. The session is REUSED across scenarios (see
+    // sharedSessions), so we do NOT close it here — instead we reset the AUT to a
+    // clean state via its own reset deep link, mirroring the TOM reference's
+    // appium resetClientState(). The session is closed once at AfterAll via
+    // teardownSharedAppiumSessions(). Best-effort: teardown must never throw.
+    if (!this.session) return; // safe / idempotent
     try {
-      if (session.deleteSession) {
-        await session.deleteSession();
-      }
+      await this.deepLink(RESET_DEEP_LINK);
     } catch {
-      // Teardown must never throw; best-effort cleanup.
-    } finally {
-      this.session = undefined;
+      // reset is best-effort; never fail teardown.
     }
+    // Detach this discarded per-scenario executor from the cached session; the
+    // session itself lives on in sharedSessions for the next scenario.
+    this.session = undefined;
   }
 
   /**

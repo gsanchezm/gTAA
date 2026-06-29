@@ -9,6 +9,7 @@
  */
 import {
   After,
+  AfterAll,
   AfterStep,
   Before,
   BeforeAll,
@@ -17,6 +18,7 @@ import {
   type ITestStepHookParameter,
 } from '@cucumber/cucumber';
 import { GtaaWorld } from './world';
+import { disposeSharedSessions } from '../../test-adaptation/drivers/driver-factory';
 import { warmUpServices } from './warm-up';
 import { runIdentity } from '../../test-reporting/telemetry/run-context';
 import { emitToolEvent, writeRunManifest } from '../../test-reporting/telemetry/telemetry-writer';
@@ -41,6 +43,14 @@ BeforeAll(async function () {
   } catch {
     /* warm-up is best-effort; never block execution */
   }
+});
+
+// Mobile (Appium) executors reuse ONE session across all scenarios (so the CI
+// emulator is not exhausted by per-scenario session churn — see TV-5); that
+// session is held at module level and must be closed once, here, at the end of
+// the run. Best-effort: an AfterAll that throws would mask the run's result.
+AfterAll(async function () {
+  await disposeSharedSessions().catch(() => undefined);
 });
 
 Before(function (this: GtaaWorld, scenario: ITestCaseHookParameter) {

@@ -9,6 +9,7 @@
 import { PlaywrightWebExecutor } from '../../test-execution/playwright/playwright-web-executor';
 import { AppiumAndroidExecutor } from '../../test-execution/appium/appium-android-executor';
 import { AppiumIosExecutor } from '../../test-execution/appium/appium-ios-executor';
+import { teardownSharedAppiumSessions } from '../../test-execution/appium/appium-executor-base';
 import { ClassifiedError, FailureBucket } from '../../shared/failure-buckets';
 import type { ExecutionContext } from '../../shared/types';
 import type { UiDriver } from './ui-driver';
@@ -33,4 +34,15 @@ export function createUiDriver(context: ExecutionContext): UiDriver {
         `Unsupported platform: ${context.platform}`,
       );
   }
+}
+
+/**
+ * Close any UI sessions reused across scenarios. Mobile (Appium) executors share
+ * one session per run (so the CI emulator is not exhausted by per-scenario
+ * session churn); this releases it once, from the AfterAll hook. Web sessions are
+ * per-scenario and need no run-level teardown, so this is Appium-only today.
+ * Best-effort by contract — never throws.
+ */
+export async function disposeSharedSessions(): Promise<void> {
+  await teardownSharedAppiumSessions();
 }
