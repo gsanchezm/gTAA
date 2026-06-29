@@ -254,38 +254,56 @@ few CI cycles or may remain intermittently short of 88/88 — a runner‑side li
 not an architecture difference. Android is expected to green more reliably once
 the ANR modal is suppressed.
 
-### Resolution (experiment owner, 2026‑06‑28): mobile is OUT OF SCOPE for the comparison — CI‑environment instability, unfixable within fairness
-Three further CI cycles (runs `28311249516`, `28313147720`, `28316969010`) with
-the infra fixes above established that **a reliably green mobile round is not
-achievable in this CI without breaking the experiment's fairness rules**, on
-*both* platforms, for reasons independent of the architecture:
+### Resolution (experiment owner, 2026‑06‑29): mobile excluded — but the two platforms have DIFFERENT causes (a contemporaneous TOM diagnostic corrected an earlier "both environmental" reading)
 
-- **Android — the AUT is killed mid‑session.** With the ANR suppressed and the
-  150‑min budget, Android ran the full suite but plateaued at **59/88**. The
-  failure screenshots + page‑source dumps are decisive: **23 of 24** failure
-  captures show the **Android launcher/home screen** — the OmniPizza app had been
-  **killed/backgrounded** on the resource‑constrained docker emulator
-  (`MEMORY=4096/CORES=2`, byte‑identical to TOM), so every subsequent element
-  lookup failed. It is *not* a scroll or locator bug (the `~btn-add-pizza-p06`
-  "CH/Marinara" cluster and the bottom‑of‑form CTAs were red because the app was
-  gone, not below the fold), and *not* architecture‑related.
-- **iOS — the host Xcode toolchain hangs intermittently.** Even with Xcode pinned
-  and pre‑warmed, `xcrun --sdk iphonesimulator --show-sdk-version` is
-  *intermittently and unrecoverably wedged* on the `macos‑14` image (warmed in 21 s
-  on one run, hung through 6×60 s retries on another → 0 sessions). When the
-  toolchain does cooperate, 88 XCUITest scenarios exceed the 150‑min budget.
+An earlier draft of this section attributed *both* mobile platforms' CI failures
+to shared environment instability ("out of scope, not architecture‑related").
+That was **not verified** and was **partly wrong**. Because TOM's green mobile
+runs (2026‑06‑07) predate a 2026‑06‑08 `macos‑14` runner‑image rebuild, "TOM
+green / gTAA red" was confounded by *non‑contemporaneous environments*. To
+resolve it we ran **TOM's own mobile suite on the CURRENT CI** as a validity
+check (a diagnostic run; it does **not** alter TOM's frozen 50‑run dataset).
+TOM's workflow serialises runs via `concurrency: cancel-in-progress`, so of five
+dispatched only one completed; it is decisive:
 
-Neither is fixable without violating fairness: raising the emulator's
-memory/cores would **exceed TOM's frozen config**, and adding a gTAA‑only
-"relaunch the app if it fell to the launcher" recovery would make gTAA **more
-robust than TOM** (which has no such recovery) — either biases the paired
-comparison. The methodologically clean action is therefore to **treat the mobile
-(`@android`/`@ios`) suites as out of scope** for the gTAA↔TOM comparison — a
-shared CI‑environment limitation, not an architecture signal — and read the
-experiment on the **web / API / visual / performance** core.
+| | TOM, run TODAY on the current CI | gTAA on the current CI |
+|---|---|---|
+| **Android** | **success — 88/88** (33 min) | **~30/88 fail** |
+| **iOS** | **failure** | failure / 0 sessions |
 
-The CI‑infra fixes (Xcode pin + pre‑warm, ANR suppression, the
-`mobile: scrollGesture`→W3C‑swipe correction and scroll‑before‑wait order — both
-genuine alignments to TOM's mobile interaction) are **kept**: they are fair,
-move gTAA toward TOM, and took Android from 0/88 to 59/88. They simply cannot
-overcome the emulator killing the app or the runner's wedged toolchain.
+This splits the two platforms cleanly:
+
+- **iOS = environmental (shared limitation).** TOM **also** fails iOS on the
+  current CI, so the `macos‑14` Xcode toolchain hang (`xcrun
+  --sdk iphonesimulator --show-sdk-version` intermittently/unrecoverably wedged,
+  even pinned + pre‑warmed) is **not gTAA‑specific** — both arms are equally hit.
+  Excluded as a shared CI‑environment threat, no architecture signal.
+
+- **Android = gTAA‑specific (a real difference).** TOM passes the SAME scenarios
+  88/88 on the SAME emulator, so gTAA's failures are **not** environmental. The
+  failure dumps show the AUT on the **Android launcher** — the OmniPizza app
+  **loses the foreground** mid‑run in the builder/checkout/CH cluster. Two
+  hypotheses were tested and **rejected** by instrumentation:
+  - **NOT per‑scenario session churn.** gTAA's Automated Atomic Testing recreates
+    the Appium session per scenario (88×) vs TOM's one reused session. A
+    session‑reuse fix (branch `fix/mobile-session-reuse`, commit `032d7c0`) cut
+    the bootstraps to ~6 (UiAutomator2 installed once) — and the app‑drop and the
+    ~30 failures were **unchanged**. So churn is a real gTAA↔TOM difference but
+    **not the cause**; the fix is **not merged** (it would diverge gTAA from its
+    documented per‑scenario design and from the state the 50‑run batch ran).
+  - **NOT out‑of‑memory.** The `appium-android-server.log` shows **no**
+    `lowmemorykiller` / OOM events; the foreground loss is not memory pressure.
+  The exact mechanism (what sends the AUT to the launcher — most likely a
+  gTAA navigation/deep‑link path that fails to re‑foreground the app, where TOM's
+  does not) is **partially characterised, not fully root‑caused.**
+
+**Disposition.** Restrict the gTAA↔TOM comparison to the **web / API / visual /
+performance** core (green, validated across the 50‑run batch). Report **iOS** as a
+shared CI‑environment limitation and **Android** as a **gTAA‑specific difference**
+whose mechanism (AUT foreground‑loss; session churn ruled out as cause, OOM ruled
+out) is documented for follow‑up — **not** claimed as either pure environment or a
+clean architecture verdict. The earlier CI‑infra fixes on `main` (Xcode pin +
+pre‑warm, ANR suppression, `mobile: scrollGesture`→W3C‑swipe + scroll‑before‑wait
+— fair TOM alignments) are kept; they took Android 0/88 → ~58/88 but cannot
+overcome the foreground‑loss. The session‑reuse experiment is preserved on its
+branch as a record + a genuine observed difference (gTAA 88 sessions/run vs TOM 1).
